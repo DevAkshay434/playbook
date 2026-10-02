@@ -18,8 +18,12 @@ export default async function LoginPage({
   let errorMessage = "";
   if (errorParam === "AccessDenied") {
     errorMessage = "Your account has not been authorized for the Support Playbook.";
+  } else if (errorParam === "ForgotPassword") {
+    errorMessage = "Please contact your Playbook administrator to reset your password.";
+  } else if (errorParam === "CredentialsSignin") {
+    errorMessage = "Invalid email or password.";
   } else if (errorParam) {
-    errorMessage = "Authentication failed. Please try again.";
+    errorMessage = "Invalid email or password.";
   }
 
   return (
@@ -33,6 +37,55 @@ export default async function LoginPage({
         {errorMessage && (
           <div className="text-[13px] text-[var(--stop)] bg-[var(--stop-soft)] p-[12px] rounded-[6px] border border-[var(--stop)] font-medium">
             {errorMessage}
+          </div>
+        )}
+
+        <form
+          action={async (formData) => {
+            "use server";
+            await signIn("production-credentials", {
+              email: formData.get("email"),
+              password: formData.get("password"),
+              redirectTo: "/",
+            });
+          }}
+          className="flex flex-col gap-[15px] text-left"
+        >
+          <div className="flex flex-col gap-[5px]">
+            <label className="text-[12px] font-bold text-[var(--ink-2)] uppercase tracking-wider">Email</label>
+            <input 
+              name="email" 
+              type="email" 
+              required
+              className="p-[10px] rounded-[6px] border border-[var(--line)] bg-[var(--ground)] text-[14px]"
+            />
+          </div>
+          <div className="flex flex-col gap-[5px]">
+            <div className="flex justify-between items-center">
+              <label className="text-[12px] font-bold text-[var(--ink-2)] uppercase tracking-wider">Password</label>
+            </div>
+            <input 
+              name="password" 
+              type="password" 
+              required
+              className="p-[10px] rounded-[6px] border border-[var(--line)] bg-[var(--ground)] text-[14px]"
+            />
+            <div className="text-right mt-1">
+              <a href="/login?error=ForgotPassword" className="text-[12px] text-[var(--navy)] hover:underline">
+                Forgot password?
+              </a>
+            </div>
+          </div>
+          <button type="submit" className="w-full bg-[var(--navy)] text-white font-display font-bold text-[13px] tracking-[0.05em] uppercase rounded-[6px] p-[12px] hover:bg-[var(--accent)] transition-colors border-0 cursor-pointer mt-[5px]">
+            Sign In
+          </button>
+        </form>
+
+        {hasProdAuth && (
+          <div className="relative flex items-center py-[10px]">
+            <div className="flex-grow border-t border-[var(--line)]"></div>
+            <span className="flex-shrink-0 mx-[10px] text-[12px] text-[var(--ink-3)] font-bold uppercase tracking-wider">OR</span>
+            <div className="flex-grow border-t border-[var(--line)]"></div>
           </div>
         )}
 

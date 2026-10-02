@@ -44,3 +44,22 @@ If configuring production OAuth, register the following callback URLs in your pr
 https://playbook.softprowatersystems.com/api/auth/callback/google`n
 **Microsoft Entra ID:**
 https://playbook.softprowatersystems.com/api/auth/callback/microsoft-entra-id`n
+
+## Production Authentication
+There is no public signup page. Accounts must be created by administrators.
+
+### First Admin Setup
+To bootstrap the first admin, run the following command in your terminal/Vercel deployment context:
+``bash
+npm run create-admin -- admin@yourcompany.com "Admin Name"
+``
+The script will output a secure one-time link. Open that link to set your password and log in.
+
+### Creating Users
+1. Go to /admin/users.
+2. Add the user's name, email, and role.
+3. A one-time invitation link will be generated.
+4. Securely share this link with the user. It expires in 48 hours.
+
+### Password Reset
+If a user forgets their password, an admin can generate a new reset link for them from the /admin/users page.

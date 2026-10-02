@@ -3,11 +3,44 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import EntraIdProvider from "next-auth/providers/microsoft-entra-id";
 import { prisma } from "@/lib/prisma";
+import bcrypt from "bcryptjs";
 
 const isDevAuthEnabled = process.env.NODE_ENV !== "production" && process.env.ENABLE_DEV_AUTH === "true";
 
 export const authConfig: NextAuthConfig = {
   providers: [
+    CredentialsProvider({
+      id: "production-credentials",
+      name: "Email and Password",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) return null;
+        const email = String(credentials.email).toLowerCase().trim();
+        const password = String(credentials.password);
+
+        try {
+          const user = await prisma.user.findUnique({ where: { email } });
+          if (!user || !user.active || !user.passwordHash) return null;
+
+          const isValid = await bcrypt.compare(password, user.passwordHash);
+          if (!isValid) return null;
+
+          return {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            active: user.active
+          };
+        } catch (e) {
+          console.error("Credentials error", e);
+          return null;
+        }
+      }
+    }),
     ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET ? [
       GoogleProvider({
         clientId: process.env.GOOGLE_CLIENT_ID,
@@ -44,7 +77,7 @@ export const authConfig: NextAuthConfig = {
   ],
   callbacks: {
     async signIn({ user, account, profile }) {
-      if (account?.provider === "credentials") {
+      if (account?.provider === "credentials" || account?.provider === "production-credentials") {
         return true;
       }
       // For Google/Entra ID, verify against database
@@ -84,6 +117,7 @@ export const authConfig: NextAuthConfig = {
       
       const isPublicPath = 
         nextUrl.pathname === "/login" || 
+        nextUrl.pathname === "/set-password" ||
         nextUrl.pathname.startsWith("/api/auth") ||
         nextUrl.pathname.startsWith("/api/health") ||
         nextUrl.pathname.startsWith("/api/cron");
