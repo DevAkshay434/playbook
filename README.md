@@ -36,3 +36,11 @@ Because the system strictly authorizes users via the database, you cannot simply
 2. Connect directly to your PostgreSQL database (e.g., via `psql` or Prisma Studio).
 3. Update your User record's role: `UPDATE "User" SET role = 'ADMIN' WHERE email = 'your@email.com';`
 4. Once you have ADMIN access, you can manage and elevate other users from `/admin/users` directly in the UI.
+
+## OAuth Callback URLs
+If configuring production OAuth, register the following callback URLs in your provider console:
+
+**Google Workspace:**
+https://playbook.softprowatersystems.com/api/auth/callback/google`n
+**Microsoft Entra ID:**
+https://playbook.softprowatersystems.com/api/auth/callback/microsoft-entra-id`n
