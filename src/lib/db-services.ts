@@ -15,7 +15,8 @@ export async function getPlaybooks() {
       include: {
         category: true,
         policyReferences: true
-      }
+      },
+      orderBy: { sortOrder: 'asc' }
     });
   }
   if (!allowStaticFallback) throw new Error("Database connection required.");
@@ -62,7 +63,9 @@ export async function getCategories() {
 
 export async function getAuthorityRules() {
   if (isDbConnected) {
-    return prisma.authorityRule.findMany();
+    return prisma.authorityRule.findMany({
+      orderBy: { sortOrder: 'asc' }
+    });
   }
   if (!allowStaticFallback) throw new Error("Database connection required.");
   return fallbackAuthorityRules;
@@ -70,7 +73,9 @@ export async function getAuthorityRules() {
 
 export async function getPolicies() {
   if (isDbConnected) {
-    return prisma.policy.findMany();
+    return prisma.policy.findMany({
+      orderBy: { sortOrder: 'asc' }
+    });
   }
   if (!allowStaticFallback) throw new Error("Database connection required.");
   return fallbackPolicies;
@@ -78,7 +83,9 @@ export async function getPolicies() {
 
 export async function getTools() {
   if (isDbConnected) {
-    return prisma.tool.findMany();
+    return prisma.tool.findMany({
+      orderBy: { sortOrder: 'asc' }
+    });
   }
   if (!allowStaticFallback) throw new Error("Database connection required.");
   return fallbackTools;

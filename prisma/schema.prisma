@@ -98,6 +98,7 @@ model Playbook {
   lastConfirmed        String?
   knownGap             Boolean    @default(false)
   active               Boolean    @default(true)
+  sortOrder            Int        @default(0)
   createdAt            DateTime   @default(now())
   updatedAt            DateTime   @updatedAt
 
@@ -124,12 +125,14 @@ model AuthorityRule {
   ceiling String?
   confirm Boolean  @default(false)
   cond    String?
+  sortOrder Int    @default(0)
 }
 
 model Policy {
   id      String   @id @default(uuid())
   policy  String
   note    String
+  sortOrder Int    @default(0)
 }
 
 model Tool {
@@ -137,6 +140,7 @@ model Tool {
   name    String
   role    String
   note    String
+  sortOrder Int    @default(0)
 }
 
 model Resolution {
