@@ -20,6 +20,7 @@ function HeaderContent() {
           <SearchBar />
         </div>
       </div>
+      <div id="header-filter-portal"></div>
     </header>
   );
 }
