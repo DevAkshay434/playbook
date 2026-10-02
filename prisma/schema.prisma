@@ -1,0 +1,224 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  AGENT
+  MANAGER
+  ADMIN
+}
+
+enum TicketSource {
+  RICHPANEL
+  GHL
+  OTHER
+}
+
+enum ResolutionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum SyncTrigger {
+  MANUAL
+  CRON
+}
+
+enum SyncStatus {
+  RUNNING
+  SUCCESS
+  FAILED
+}
+
+model User {
+  id            String       @id @default(uuid())
+  name          String?
+  email         String       @unique
+  image         String?
+  role          Role         @default(AGENT)
+  active        Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  submittedResolutions Resolution[] @relation("SubmittedResolutions")
+  reviewedResolutions  Resolution[] @relation("ReviewedResolutions")
+  playbookChanges      PlaybookVersion[]
+  searchEvents         SearchEvent[]
+  playbookKbLinks      PlaybookKnowledgeBaseArticle[]
+}
+
+model Category {
+  id          String     @id @default(uuid())
+  slug        String     @unique
+  name        String
+  description String?
+  sortOrder   Int        @default(0)
+  active      Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  playbooks   Playbook[]
+}
+
+model Playbook {
+  id                   String     @id @default(uuid())
+  slug                 String     @unique
+  title                String
+  categoryId           String
+  category             Category   @relation(fields: [categoryId], references: [id])
+  authority            String
+  summary              String?
+  customerPhrases      String[]
+  aliases              String[]
+  facts                String[]
+  troubleshootingSteps String[]
+  suggestedResponse    String?
+  dontDo               String[]
+  source               String?
+  lastConfirmed        String?
+  knownGap             Boolean    @default(false)
+  active               Boolean    @default(true)
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
+
+  policyReferences     PolicyReference[]
+  resolutions          Resolution[]
+  versions             PlaybookVersion[]
+  kbArticleLinks       PlaybookKnowledgeBaseArticle[]
+}
+
+model PolicyReference {
+  id          String   @id @default(uuid())
+  playbookId  String
+  playbook    Playbook @relation(fields: [playbookId], references: [id], onDelete: Cascade)
+  title       String
+  reference   String
+  url         String?
+  description String?
+}
+
+model AuthorityRule {
+  id      String   @id @default(uuid())
+  action  String
+  who     String
+  ceiling String?
+  confirm Boolean  @default(false)
+  cond    String?
+}
+
+model Policy {
+  id      String   @id @default(uuid())
+  policy  String
+  note    String
+}
+
+model Tool {
+  id      String   @id @default(uuid())
+  name    String
+  role    String
+  note    String
+}
+
+model Resolution {
+  id                      String   @id @default(uuid())
+  customerIssue           String
+  ticketId                String?
+  ticketSource            TicketSource
+  symptoms                String?
+  troubleshootingPerformed String?
+  finalResolution         String
+  refundCreditAmount      String?
+  notesForFutureAgents    String?
+  relatedPlaybookId       String?
+  relatedPlaybook         Playbook? @relation(fields: [relatedPlaybookId], references: [id])
+  submittedByUserId       String
+  submittedBy             User     @relation("SubmittedResolutions", fields: [submittedByUserId], references: [id])
+  status                  ResolutionStatus @default(PENDING)
+  reviewedByUserId        String?
+  reviewedBy              User?    @relation("ReviewedResolutions", fields: [reviewedByUserId], references: [id])
+  reviewNotes             String?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+  reviewedAt              DateTime?
+}
+
+model PlaybookVersion {
+  id              String   @id @default(uuid())
+  playbookId      String
+  playbook        Playbook @relation(fields: [playbookId], references: [id], onDelete: Cascade)
+  versionNumber   Int
+  snapshot        Json
+  changedByUserId String
+  changedBy       User     @relation(fields: [changedByUserId], references: [id])
+  changeNote      String?
+  createdAt       DateTime @default(now())
+}
+
+model SearchEvent {
+  id                String   @id @default(uuid())
+  userId            String?
+  user              User?    @relation(fields: [userId], references: [id])
+  query             String
+  normalizedQuery   String?
+  categoryFilter    String?
+  authorityFilter   String?
+  resultCount       Int
+  selectedResultId  String?
+  selectedResultType String?
+  selectedPlaybookId String?
+  createdAt         DateTime @default(now())
+}
+
+model KnowledgeBaseArticle {
+  id                   String    @id @default(uuid())
+  externalId           String    @unique
+  source               String    @default("wordpress")
+  slug                 String
+  title                String
+  excerpt              String?
+  contentText          String
+  contentHtml          String?
+  url                  String
+  featuredImageUrl     String?
+  wordpressModifiedAt  DateTime
+  indexedAt            DateTime  @default(now())
+  active               Boolean   @default(true)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  playbookLinks        PlaybookKnowledgeBaseArticle[]
+}
+
+model PlaybookKnowledgeBaseArticle {
+  id                      String   @id @default(uuid())
+  playbookId              String
+  playbook                Playbook @relation(fields: [playbookId], references: [id], onDelete: Cascade)
+  knowledgeBaseArticleId  String
+  knowledgeBaseArticle    KnowledgeBaseArticle @relation(fields: [knowledgeBaseArticleId], references: [id], onDelete: Cascade)
+  sortOrder               Int      @default(0)
+  createdByUserId         String?
+  createdBy               User?    @relation(fields: [createdByUserId], references: [id])
+  createdAt               DateTime @default(now())
+
+  @@unique([playbookId, knowledgeBaseArticleId])
+}
+
+model KnowledgeBaseSyncRun {
+  id                String      @id @default(uuid())
+  source            String      @default("wordpress")
+  status            SyncStatus  @default(RUNNING)
+  triggeredBy       SyncTrigger
+  startedAt         DateTime    @default(now())
+  completedAt       DateTime?
+  totalFetched      Int         @default(0)
+  addedCount        Int         @default(0)
+  updatedCount      Int         @default(0)
+  deactivatedCount  Int         @default(0)
+  errorMessage      String?
+}

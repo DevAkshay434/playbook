@@ -1,36 +1,38 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SoftPro CS Field Playbook
 
-## Getting Started
+## Local Setup
+1. Clone the repository
+2. Run `npm install`
+3. Copy `.env.example` to `.env` and fill in the required variables.
 
-First, run the development server:
+## Database Setup
+1. Ensure PostgreSQL is installed and running.
+2. In your `.env` file, set `DATABASE_URL` to your connection string. Example: `DATABASE_URL="postgresql://user:password@localhost:5432/softpro?schema=public"`
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Authentication Configuration
+1. Authentication is modularly implemented using Auth.js (NextAuth).
+2. Set `AUTH_SECRET` in `.env` to a secure random string (e.g., generated via `openssl rand -base64 32`).
+3. For Phase 2 preview, a dummy Credentials provider is configured in `src/lib/auth.ts`. This will be replaced with the client's chosen provider (e.g., Google OAuth) in Phase 3.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Migration Steps
+1. Once the database is configured, run `npx prisma db push` (for prototyping) or `npx prisma migrate dev` (for structured migrations) to build the schema.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Seed Steps
+1. Run `npm run prisma db seed` to safely populate the database with the Phase 1 legacy JSON data (Categories, Playbooks, Authority Rules, Policies, Tools). This process is idempotent.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Development Command
+Run the local dev server:
+`npm run dev`
 
-## Learn More
+## Lint Command
+`npm run lint`
 
-To learn more about Next.js, take a look at the following resources:
+## Build Command
+`npm run build`
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Creating the First ADMIN User
+Because the system strictly authorizes users via the database, you cannot simply sign in with a new account and gain access.
+1. Sign in via your chosen Auth provider to create a base User record.
+2. Connect directly to your PostgreSQL database (e.g., via `psql` or Prisma Studio).
+3. Update your User record's role: `UPDATE "User" SET role = 'ADMIN' WHERE email = 'your@email.com';`
+4. Once you have ADMIN access, you can manage and elevate other users from `/admin/users` directly in the UI.
