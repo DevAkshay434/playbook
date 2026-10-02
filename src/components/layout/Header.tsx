@@ -22,13 +22,17 @@ function HeaderContent() {
   );
 }
 
+import { usePathname } from "next/navigation";
+
 export default function Header() {
+  const pathname = usePathname();
+  if (pathname === "/") return null;
+
   return (
     <header className="sticky top-0 z-40 bg-[var(--surface)] border-b border-[var(--line)] flex flex-col">
       <Suspense fallback={<div className="h-[60px]" />}>
         <HeaderContent />
       </Suspense>
-      <div id="header-filter-portal"></div>
     </header>
   );
 }

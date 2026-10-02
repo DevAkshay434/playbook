@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { createPortal } from "react-dom";
+import React, { useState, Suspense } from "react";
 import Link from "next/link";
 import SearchResults from "../search/SearchResults";
 import AddResolution from "../resolution/AddResolution";
+import SearchBar from "../search/SearchBar";
 
 export default function HomeClient({
   query,
@@ -23,11 +23,6 @@ export default function HomeClient({
 }) {
   const [selectedAuthorities, setSelectedAuthorities] = useState<Set<string>>(new Set());
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
-  const [portalNode, setPortalNode] = useState<HTMLElement | null>(null);
-
-  useEffect(() => {
-    setPortalNode(document.getElementById("header-filter-portal"));
-  }, []);
 
   const toggleAuthority = (auth: string) => {
     setSelectedAuthorities(prev => {
@@ -108,7 +103,24 @@ export default function HomeClient({
 
   return (
     <>
-      {portalNode && createPortal(filterStrip, portalNode)}
+      <header className="sticky top-0 z-40 bg-[var(--surface)] border-b border-[var(--line)] flex flex-col w-full">
+        <Suspense fallback={<div className="h-[60px]" />}>
+          <div className="max-w-[1180px] mx-auto w-full py-3 px-5 flex items-center gap-[18px] flex-wrap">
+            <Link href="/" className="flex items-baseline gap-[9px] shrink-0 no-underline">
+              <b className="font-display font-bold text-base tracking-[-0.01em] text-[var(--ink)]">
+                Field Playbook
+              </b>
+              <span className="font-display font-semibold text-[10px] tracking-[0.14em] uppercase text-[var(--ink-3)]">
+                SoftPro / QWT Customer Service
+              </span>
+            </Link>
+            <div className="flex-1 min-w-0 basis-[320px] relative flex items-center">
+              <SearchBar />
+            </div>
+          </div>
+        </Suspense>
+        {filterStrip}
+      </header>
 
       <div className="max-w-[1180px] mx-auto py-[26px] px-[20px] pb-[80px] grid grid-cols-1 md:grid-cols-[186px_minmax(0,1fr)] gap-[22px] md:gap-[36px] items-start">
         {/* Navigation Rail */}
