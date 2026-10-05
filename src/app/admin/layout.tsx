@@ -1,14 +1,12 @@
-import { auth, isAdmin, isManager } from "@/lib/auth";
+import { isAdmin, isManager } from "@/lib/auth";
+import { requireActiveDbUser } from "@/lib/server-auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const session = await auth();
-  if (!session || !session.user) {
-    redirect("/login");
-  }
+  const { dbUser } = await requireActiveDbUser();
 
-  const role = (session.user as any).role;
+  const role = dbUser.role;
   if (!isManager(role)) {
     return (
       <div className="p-10 text-center">

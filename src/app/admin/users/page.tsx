@@ -1,12 +1,13 @@
 import { prisma } from "@/lib/prisma";
 import { isDbConnected } from "@/lib/db-services";
-import { auth, isAdmin } from "@/lib/auth";
+import { isAdmin } from "@/lib/auth";
+import { requireActiveDbUser } from "@/lib/server-auth";
 import { redirect } from "next/navigation";
 import UserManager from "./UserManager";
 
 export default async function UsersAdminPage() {
-  const session = await auth();
-  if (!isAdmin((session?.user as any)?.role)) {
+  const { dbUser } = await requireActiveDbUser();
+  if (!isAdmin(dbUser.role)) {
     redirect("/admin");
   }
 

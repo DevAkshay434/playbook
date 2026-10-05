@@ -18,12 +18,18 @@ export default async function ResolutionsAdminPage() {
 
   async function updateStatus(formData: FormData) {
     "use server";
+    const { auth } = await import("@/lib/auth");
+    const session = await auth();
     const id = formData.get("id") as string;
     const status = formData.get("status") as any;
-    if (isDbConnected) {
+    if (isDbConnected && session?.user?.id) {
       await prisma.resolution.update({
         where: { id },
-        data: { status, reviewedAt: new Date() }
+        data: { 
+          status, 
+          reviewedAt: new Date(),
+          reviewedByUserId: session.user.id as string
+        }
       });
       revalidatePath("/admin/resolutions");
     }

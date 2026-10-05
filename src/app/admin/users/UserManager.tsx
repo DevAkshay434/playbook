@@ -4,7 +4,6 @@ import { useState } from "react";
 import { createUserWithInvite, generateResetLink, toggleUserActive, updateUserRole } from "@/app/actions/user";
 
 export default function UserManager({ initialUsers, appUrl }: { initialUsers: any[], appUrl: string }) {
-  const [users, setUsers] = useState(initialUsers);
   const [inviteLink, setInviteLink] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -25,8 +24,8 @@ export default function UserManager({ initialUsers, appUrl }: { initialUsers: an
       const token = await createUserWithInvite(name, email, role);
       setInviteLink(`${appUrl}/set-password?token=${token}`);
       setSuccessMsg("Invitation created successfully.");
-      // We rely on revalidatePath in the action, but since we are replacing state locally or reloading, we can just reload
-      window.location.reload();
+      // Form reset isn't required if we don't mind them submitting another, but we should reset
+      (e.target as HTMLFormElement).reset();
     } catch (err: any) {
       setError(err.message || "Failed to create user");
     }
@@ -118,8 +117,12 @@ export default function UserManager({ initialUsers, appUrl }: { initialUsers: an
                 </td>
                 <td className="text-left p-[10px_14px] border-b border-[var(--line-soft)]">
                   <form action={async (formData) => {
-                    const role = formData.get("role") as any;
-                    await updateUserRole(u.id, role);
+                    try {
+                      const role = formData.get("role") as any;
+                      await updateUserRole(u.id, role);
+                    } catch (e: any) {
+                      alert(e.message || "Failed to update role");
+                    }
                   }} className="flex items-center gap-[4px]">
                     <select name="role" defaultValue={u.role} className="bg-transparent border border-[var(--line)] rounded-[4px] px-[4px] py-[2px] font-display text-[10px] tracking-[0.05em] uppercase outline-none focus:border-[var(--accent)]">
                       <option value="AGENT">Agent</option>
@@ -140,7 +143,12 @@ export default function UserManager({ initialUsers, appUrl }: { initialUsers: an
                 <td className="text-left p-[10px_14px] border-b border-[var(--line-soft)]">
                   <div className="flex items-center gap-[10px]">
                     <form action={async () => {
-                      await toggleUserActive(u.id, !u.active);
+                      if (u.active && !confirm("Revoke access for this user?")) return;
+                      try {
+                        await toggleUserActive(u.id, !u.active);
+                      } catch (e: any) {
+                        alert(e.message || "Failed to toggle user access");
+                      }
                     }}>
                       <button type="submit" className="text-[var(--accent)] hover:underline font-mono text-[12px] bg-transparent border-0 cursor-pointer p-0">
                         {u.active ? "Deactivate" : "Activate"}

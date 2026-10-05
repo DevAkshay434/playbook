@@ -1,16 +1,27 @@
 "use server";
 import { prisma } from "@/lib/prisma";
 import { isDbConnected } from "@/lib/db-services";
-import { auth, isAdmin } from "@/lib/auth";
+import { isAdmin } from "@/lib/auth";
+import { requireActiveDbUser } from "@/lib/server-auth";
 import { revalidatePath } from "next/cache";
 
 export async function updateUserRole(userId: string, role: "AGENT" | "MANAGER" | "ADMIN") {
-  const session = await auth();
-  if (!isAdmin((session?.user as any)?.role)) {
+  const { dbUser } = await requireActiveDbUser();
+  if (!isAdmin(dbUser.role)) {
     throw new Error("Unauthorized");
   }
 
   if (isDbConnected) {
+    if (role !== "ADMIN") {
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      if (user?.role === "ADMIN" && user?.active) {
+        const adminCount = await prisma.user.count({ where: { role: "ADMIN", active: true } });
+        if (adminCount <= 1) {
+          throw new Error("Cannot downgrade the last active admin.");
+        }
+      }
+    }
+
     await prisma.user.update({
       where: { id: userId },
       data: { role }
@@ -20,8 +31,8 @@ export async function updateUserRole(userId: string, role: "AGENT" | "MANAGER" |
 }
 
 export async function toggleUserActive(userId: string, active: boolean) {
-  const session = await auth();
-  if (!isAdmin((session?.user as any)?.role)) {
+  const { dbUser } = await requireActiveDbUser();
+  if (!isAdmin(dbUser.role)) {
     throw new Error("Unauthorized");
   }
 
@@ -48,8 +59,8 @@ export async function toggleUserActive(userId: string, active: boolean) {
 import crypto from "crypto";
 
 export async function createUserWithInvite(name: string, email: string, role: "AGENT" | "MANAGER" | "ADMIN") {
-  const session = await auth();
-  if (!isAdmin((session?.user as any)?.role)) throw new Error("Unauthorized");
+  const { dbUser } = await requireActiveDbUser();
+  if (!isAdmin(dbUser.role)) throw new Error("Unauthorized");
 
   const lowerEmail = email.toLowerCase().trim();
   
@@ -66,13 +77,13 @@ export async function createUserWithInvite(name: string, email: string, role: "A
     });
   }
 
-  return generateInviteForUser(user.id, "INVITE", (session?.user as any)?.id);
+  return generateInviteForUser(user.id, "INVITE", dbUser.id);
 }
 
 export async function generateResetLink(userId: string) {
-  const session = await auth();
-  if (!isAdmin((session?.user as any)?.role)) throw new Error("Unauthorized");
-  return generateInviteForUser(userId, "RESET", (session?.user as any)?.id);
+  const { dbUser } = await requireActiveDbUser();
+  if (!isAdmin(dbUser.role)) throw new Error("Unauthorized");
+  return generateInviteForUser(userId, "RESET", dbUser.id);
 }
 
 async function generateInviteForUser(userId: string, type: "INVITE" | "RESET", createdByUserId?: string) {

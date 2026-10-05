@@ -7,6 +7,7 @@ import { submitResolution } from "@/app/actions/resolution";
 export default function AddResolution() {
   const [copied, setCopied] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const tmpl = `PLAYBOOK SUBMISSION\n\nProblem, in the customer's words:\nWhat's true (facts I confirmed):\nWhat I did, step by step:\nDollar amount involved, if any:\nHow it landed:\nOrder / ticket #:\nAnything the next agent should avoid:`;
@@ -23,15 +24,21 @@ export default function AddResolution() {
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setError(null);
     const formData = new FormData(e.currentTarget);
     startTransition(async () => {
       try {
-        await submitResolution(formData);
-        setSubmitted(true);
-        setTimeout(() => setSubmitted(false), 3000);
-        (e.target as HTMLFormElement).reset();
-      } catch (err) {
+        const result = await submitResolution(formData);
+        if (result?.error) {
+           setError(result.error);
+        } else {
+           setSubmitted(true);
+           setTimeout(() => setSubmitted(false), 5000);
+           (e.target as HTMLFormElement).reset();
+        }
+      } catch (err: any) {
         console.error(err);
+        setError(err.message || "We couldn't submit this resolution. Please try again.");
       }
     });
   };
@@ -143,11 +150,14 @@ export default function AddResolution() {
           <textarea name="notesForFutureAgents" placeholder="Anything to watch out for..." className="min-h-[70px] resize-y font-body text-[14px] text-[var(--ink)] bg-[var(--ground)] border border-[var(--line)] rounded-[6px] p-[8px_10px] focus:outline focus:outline-2 focus:outline-[var(--accent)] focus:outline-offset-1 focus:border-transparent"></textarea>
         </div>
 
-        <div className="flex items-center gap-[15px]">
-          <button type="submit" disabled={isPending} className="font-display font-bold text-[12px] tracking-[0.05em] bg-[var(--navy)] text-white border-0 rounded-[6px] p-[10px_18px] cursor-pointer hover:bg-[var(--accent)] transition-colors">
-            {isPending ? "Submitting..." : submitted ? "Submitted Successfully" : "Submit Resolution"}
-          </button>
-          {submitted && <span className="text-[13px] text-[var(--ink-2)]">Resolution submitted for review.</span>}
+        <div className="flex flex-col gap-[10px]">
+          <div className="flex items-center gap-[15px]">
+            <button type="submit" disabled={isPending} className="font-display font-bold text-[12px] tracking-[0.05em] bg-[var(--navy)] text-white border-0 rounded-[6px] p-[10px_18px] cursor-pointer hover:bg-[var(--accent)] transition-colors disabled:opacity-50">
+              {isPending ? "Submitting..." : submitted ? "Submitted Successfully" : "Submit Resolution"}
+            </button>
+            {submitted && <span className="text-[13px] text-[var(--ok)] font-medium">Resolution submitted for review.</span>}
+          </div>
+          {error && <span className="text-[13px] text-[var(--stop)] font-medium p-[10px_12px] bg-[var(--stop-soft)] rounded-[4px] border border-[var(--stop)] opacity-90">{error}</span>}
         </div>
       </form>
     </div>
