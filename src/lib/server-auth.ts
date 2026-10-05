@@ -1,1 +1,14 @@
-import { auth } from "./auth";`nimport { prisma } from "./prisma";`nimport { redirect } from "next/navigation";`n`nexport async function requireActiveDbUser() {`n  const session = await auth();`n  if (!session?.user?.id) redirect("/login");`n  `n  const user = await prisma.user.findUnique({ where: { id: session.user.id } });`n  if (!user || !user.active) {`n    redirect("/login?error=Deactivated");`n  }`n  return { session, dbUser: user };`n}
+import { auth } from "./auth";
+import { prisma } from "./prisma";
+import { redirect } from "next/navigation";
+
+export async function requireActiveDbUser() {
+  const session = await auth();
+  if (!session?.user?.id) redirect("/login");
+  
+  const user = await prisma.user.findUnique({ where: { id: session.user.id } });
+  if (!user || !user.active) {
+    redirect("/login?error=Deactivated");
+  }
+  return { session, dbUser: user };
+}
