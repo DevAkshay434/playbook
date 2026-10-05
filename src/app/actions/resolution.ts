@@ -16,7 +16,7 @@ export async function submitResolution(formData: FormData) {
       finalResolution: formData.get("finalResolution") as string,
       refundCreditAmount: (formData.get("refundCreditAmount") as string) || null,
       notesForFutureAgents: (formData.get("notesForFutureAgents") as string) || null,
-      submittedByUserId: session.user.id as string,
+      submittedByUserId: dbUser.id,
       status: "PENDING" as any
     };
 
