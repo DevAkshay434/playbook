@@ -106,6 +106,7 @@ export const authConfig: NextAuthConfig = {
     },
     session({ session, token }) {
       if (session.user) {
+        (session.user as any).id = token.sub || (token as any).id;
         (session.user as any).role = token.role;
         (session.user as any).active = token.active;
       }
