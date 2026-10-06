@@ -1,7 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
 
-// Basic dotenv parser for local test script
 function loadEnv(filePath: string) {
   if (fs.existsSync(filePath)) {
     const envConfig = fs.readFileSync(filePath, 'utf8');
@@ -10,7 +9,6 @@ function loadEnv(filePath: string) {
       if (match) {
         const key = match[1];
         let value = match[2] || '';
-        // Remove quotes if present
         if (value.length > 0 && value.startsWith('"') && value.endsWith('"')) {
           value = value.replace(/^"|"$/g, '');
         }
@@ -30,12 +28,11 @@ const API_URL = process.env.RICHPANEL_API_URL || "https://api.richpanel.com/v1/"
 async function main() {
   console.log("=== RICHPANEL API PREFLIGHT ===");
   if (!API_KEY) {
-    console.error("❌ ERROR: RICHPANEL_API_KEY is not set in .env.local");
-    console.error("Please add your secret API key to .env.local and run this script again.");
+    console.error("❌ ERROR: RICHPANEL_API_KEY is missing in .env.local");
     process.exit(1);
   }
   console.log("✅ API Key found (hidden)");
-  
+
   if (!CLIENT_ID) {
     console.error("❌ ERROR: RICHPANEL_APP_CLIENT_ID is missing");
     process.exit(1);
@@ -43,17 +40,17 @@ async function main() {
   console.log(`✅ App Client ID: ${CLIENT_ID}`);
   console.log(`✅ API URL: ${API_URL}`);
 
-  console.log("\n--- Testing Authentication & Fetching Conversations ---");
+  console.log("\n--- Testing Authentication ---");
   try {
+    const listUrl = `${API_URL}tickets?appClientId=${CLIENT_ID}&limit=5`;
     const headers = {
       "x-richpanel-key": API_KEY,
-      "Content-Type": "application/json",
-      "x-richpanel-app-client-id": CLIENT_ID
+      "Content-Type": "application/json"
     };
 
-    console.log("Fetching /tickets?limit=5...");
-    const res = await fetch(`${API_URL}tickets?limit=5`, { headers });
-    
+    console.log(`[GET] ${listUrl}`);
+    const res = await fetch(listUrl, { headers });
+
     if (!res.ok) {
       console.error(`❌ HTTP Error: ${res.status} ${res.statusText}`);
       const text = await res.text();
@@ -62,21 +59,8 @@ async function main() {
     }
 
     const data = await res.json();
-    console.log("✅ Connection Successful!");
-    
-    console.log("\n=== DATA SCHEMA (5 CONVERSATIONS) ===");
+    console.log("✅ Connection Successful!\n");
     console.log(JSON.stringify(data, null, 2).substring(0, 3000));
-    
-    if (data && data.tickets && data.tickets.length > 0) {
-       const firstTicketId = data.tickets[0].id;
-       console.log(`\n--- Fetching single ticket ${firstTicketId} ---`);
-       const tRes = await fetch(`${API_URL}tickets/${firstTicketId}`, { headers });
-       if (tRes.ok) {
-           const tData = await tRes.json();
-           console.log(JSON.stringify(tData, null, 2).substring(0, 3000));
-       }
-    }
-    
   } catch (err: any) {
     console.error("❌ Network or Execution Error:", err.message);
   }
