@@ -1,9 +1,9 @@
 import { RichpanelSearchResponse, RichpanelTicket } from './types';
 
-const API_KEY = process.env.RICHPANEL_API_KEY;
-const API_URL = process.env.RICHPANEL_API_URL || "https://api.richpanel.com/v1/";
-
 function getHeaders() {
+  const API_KEY = process.env.RICHPANEL_API_KEY;
+  const API_URL = process.env.RICHPANEL_API_URL || "https://api.richpanel.com/v1/";
+  
   if (!API_KEY) {
     throw new Error("Missing RICHPANEL_API_KEY");
   }
@@ -14,6 +14,7 @@ function getHeaders() {
 }
 
 export async function fetchClosedTickets(limit: number = 30, nextUrl?: string | null): Promise<RichpanelSearchResponse> {
+  const API_URL = process.env.RICHPANEL_API_URL || "https://api.richpanel.com/v1/";
   const url = nextUrl || `${API_URL}tickets?status=CLOSED`;
   const res = await fetch(url, { headers: getHeaders() });
   
@@ -25,6 +26,7 @@ export async function fetchClosedTickets(limit: number = 30, nextUrl?: string | 
 }
 
 export async function fetchTicket(id: string): Promise<RichpanelTicket> {
+  const API_URL = process.env.RICHPANEL_API_URL || "https://api.richpanel.com/v1/";
   const res = await fetch(`${API_URL}tickets/${id}`, { headers: getHeaders() });
   
   if (!res.ok) {

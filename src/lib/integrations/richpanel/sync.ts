@@ -1,4 +1,5 @@
 import { fetchClosedTickets } from './client';
+import { normalizeRichpanelTicket } from './normalizer';
 import { prisma } from '@/lib/prisma';
 import { SupportCaseSource } from '@prisma/client';
 
@@ -50,61 +51,64 @@ export async function runRichpanelSync(options: SyncOptions = {}) {
         continue;
       }
       
-      const externalId = t.id || t.conversation_no;
-      if (!externalId) {
+      const normalized = normalizeRichpanelTicket(t);
+      if (!normalized.externalId) {
         skipped++;
         continue;
       }
-      
-      const sourceUpdatedAt = new Date(t.updated_at);
-      const openedAt = new Date(t.created_at);
-      const closedAt = t.closed_at ? new Date(t.closed_at) : new Date(t.updated_at);
       
       // Check existing
       const existing = await prisma.historicalSupportCase.findUnique({
         where: {
           source_externalId: {
             source: SupportCaseSource.RICHPANEL,
-            externalId: externalId
+            externalId: normalized.externalId
           }
         }
       });
       
-      if (existing) {
-        // Skip if not newer
-        if (existing.sourceUpdatedAt && existing.sourceUpdatedAt.getTime() >= sourceUpdatedAt.getTime()) {
-          skipped++;
-          continue;
+      try {
+        if (existing) {
+          // Skip if not newer
+          if (existing.sourceUpdatedAt && existing.sourceUpdatedAt.getTime() >= normalized.sourceUpdatedAt.getTime()) {
+            skipped++;
+            continue;
+          }
+          
+          await prisma.historicalSupportCase.update({
+            where: { id: existing.id },
+            data: {
+              subject: normalized.subject,
+              tags: normalized.tags,
+              sourceUpdatedAt: normalized.sourceUpdatedAt,
+              resolvedAt: normalized.closedAt,
+              sourceUrl: normalized.sourceUrl,
+              externalNumber: normalized.externalNumber // ensure safe type updating too
+            }
+          });
+          updated++;
+        } else {
+          await prisma.historicalSupportCase.create({
+            data: {
+              source: SupportCaseSource.RICHPANEL,
+              externalId: normalized.externalId,
+              externalNumber: normalized.externalNumber,
+              subject: normalized.subject,
+              tags: normalized.tags,
+              sourceUrl: normalized.sourceUrl,
+              openedAt: normalized.openedAt,
+              resolvedAt: normalized.closedAt,
+              sourceUpdatedAt: normalized.sourceUpdatedAt,
+              reviewStatus: "PENDING",
+              extractionStatus: "NOT_PROCESSED"
+            }
+          });
+          inserted++;
         }
-        
-        await prisma.historicalSupportCase.update({
-          where: { id: existing.id },
-          data: {
-            subject: t.subject,
-            tags: tags,
-            sourceUpdatedAt,
-            resolvedAt: closedAt,
-            sourceUrl: t.url
-          }
-        });
-        updated++;
-      } else {
-        await prisma.historicalSupportCase.create({
-          data: {
-            source: SupportCaseSource.RICHPANEL,
-            externalId: externalId,
-            externalNumber: t.conversation_no || null,
-            subject: t.subject,
-            tags: tags,
-            sourceUrl: t.url,
-            openedAt,
-            resolvedAt: closedAt,
-            sourceUpdatedAt,
-            reviewStatus: "PENDING",
-            extractionStatus: "NOT_PROCESSED"
-          }
-        });
-        inserted++;
+      } catch (err: any) {
+        // Safe server-side log for individual item error
+        console.error(`Historical case normalization/save failed for externalId ${normalized.externalId}: invalid type or db error.`);
+        throw err; // bubble up to fail the sync safely
       }
     }
     
@@ -122,6 +126,10 @@ export async function runRichpanelSync(options: SyncOptions = {}) {
     
     return { success: true, scanned, inserted, updated, skipped };
   } catch (error: any) {
+    // Keep it safe in the DB and Logs
+    const safeErrorMsg = "Richpanel sync failed while saving a historical case.";
+    console.error(`Richpanel Sync Error (safe): ${safeErrorMsg}`, error.message);
+
     await prisma.integrationSyncState.update({
       where: { id: syncState.id },
       data: {
@@ -131,9 +139,10 @@ export async function runRichpanelSync(options: SyncOptions = {}) {
         recordsInserted: inserted,
         recordsUpdated: updated,
         recordsSkipped: skipped,
-        errorMessage: error.message
+        errorMessage: safeErrorMsg
       }
     });
-    return { success: false, error: error.message };
+    
+    return { success: false, error: safeErrorMsg };
   }
 }

@@ -12,9 +12,10 @@ export async function POST(req: Request) {
     if (result.success) {
       return NextResponse.json({ success: true, result });
     } else {
-      return NextResponse.json({ success: false, error: result.error }, { status: 500 });
+      return NextResponse.json({ success: false, error: result.error || "Richpanel sync failed. Please check the server logs for details." }, { status: 500 });
     }
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    console.error("Critical Route Error during Richpanel Sync:", error.message);
+    return NextResponse.json({ success: false, error: "Richpanel sync failed. Please check the server logs for details." }, { status: 500 });
   }
 }

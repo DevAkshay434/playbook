@@ -1,6 +1,6 @@
 export interface RichpanelTicket {
   id: string;
-  conversation_no?: string;
+  conversation_no?: number | string | null;
   created_at: string;
   updated_at: string;
   closed_at?: string;
