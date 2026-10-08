@@ -1,8 +1,9 @@
 import { auth } from "./auth";
 import { prisma } from "./prisma";
 import { redirect } from "next/navigation";
+import { cache } from "react";
 
-export async function requireActiveDbUser() {
+export const requireActiveDbUser = cache(async () => {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
   
@@ -11,4 +12,4 @@ export async function requireActiveDbUser() {
     redirect("/login?error=Deactivated");
   }
   return { session, dbUser: user };
-}
+});

@@ -2,37 +2,47 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 
 export default async function AnalyticsPage() {
-  // ── Search Activity ──
-  const totalSearches = await prisma.searchEvent.count();
-  const searchesWithResults = await prisma.searchEvent.count({ where: { resultCount: { gt: 0 } } });
-  const zeroResultSearches = await prisma.searchEvent.count({ where: { resultCount: 0 } });
+  // Execute independent queries concurrently
+  const [
+    totalSearches,
+    searchesWithResults,
+    zeroResultSearches,
+    popularQueriesRaw,
+    zeroResultQueriesRaw,
+    playbooks,
+    pendingResolutions
+  ] = await Promise.all([
+    prisma.searchEvent.count(),
+    prisma.searchEvent.count({ where: { resultCount: { gt: 0 } } }),
+    prisma.searchEvent.count({ where: { resultCount: 0 } }),
+    prisma.searchEvent.groupBy({
+      by: ["normalizedQuery"],
+      where: { normalizedQuery: { not: null } },
+      _count: { id: true },
+      orderBy: { _count: { id: "desc" } },
+      take: 15,
+    }),
+    prisma.searchEvent.groupBy({
+      by: ["normalizedQuery"],
+      where: { resultCount: 0, normalizedQuery: { not: null } },
+      _count: { id: true },
+      orderBy: { _count: { id: "desc" } },
+      take: 20,
+    }),
+    prisma.playbook.findMany({
+      where: { active: true },
+      select: { id: true, slug: true, title: true, lastConfirmed: true },
+      orderBy: { title: "asc" },
+    }),
+    prisma.resolution.count({ where: { status: "PENDING" } })
+  ]);
+
   const zeroResultRate = totalSearches > 0 ? ((zeroResultSearches / totalSearches) * 100).toFixed(1) : "0";
 
-  // ── Popular Queries (top 15 by frequency) ──
-  const popularQueries: { normalizedQuery: string; _count: { id: number } }[] = await prisma.searchEvent.groupBy({
-    by: ["normalizedQuery"],
-    where: { normalizedQuery: { not: null } },
-    _count: { id: true },
-    orderBy: { _count: { id: "desc" } },
-    take: 15,
-  }) as any;
+  const popularQueries: { normalizedQuery: string; _count: { id: number } }[] = popularQueriesRaw as any;
+  const zeroResultQueries: { normalizedQuery: string; _count: { id: number } }[] = zeroResultQueriesRaw as any;
 
-  // ── Missing Playbook Coverage: frequent zero-result queries ──
-  const zeroResultQueries: { normalizedQuery: string; _count: { id: number } }[] = await prisma.searchEvent.groupBy({
-    by: ["normalizedQuery"],
-    where: { resultCount: 0, normalizedQuery: { not: null } },
-    _count: { id: true },
-    orderBy: { _count: { id: "desc" } },
-    take: 20,
-  }) as any;
-
-  // ── Stale SOP Report ──
-  const playbooks = await prisma.playbook.findMany({
-    where: { active: true },
-    select: { id: true, slug: true, title: true, lastConfirmed: true },
-    orderBy: { title: "asc" },
-  });
-
+  // Stale SOP Report
   const now = new Date();
   const staleBuckets = { fresh: [] as typeof playbooks, aging: [] as typeof playbooks, stale: [] as typeof playbooks, never: [] as typeof playbooks };
 
@@ -48,9 +58,6 @@ export default async function AnalyticsPage() {
     else staleBuckets.stale.push(pb);
   }
 
-  // ── Pending Resolutions ──
-  const pendingResolutions = await prisma.resolution.count({ where: { status: "PENDING" } });
-
   return (
     <div className="flex flex-col gap-[30px]">
       <div className="flex flex-col gap-[3px] mb-[10px]">
@@ -58,7 +65,7 @@ export default async function AnalyticsPage() {
         <p className="text-[var(--ink-2)] text-[13.5px]">Search activity, coverage gaps, and content freshness.</p>
       </div>
 
-      {/* ── Metric Cards ── */}
+      {/* Metric Cards */}
       <div className="grid grid-cols-[repeat(auto-fit,minmax(170px,1fr))] gap-[12px]">
         <MetricCard label="Total Searches" value={totalSearches} />
         <MetricCard label="With Results" value={searchesWithResults} color="ok" />
@@ -69,10 +76,10 @@ export default async function AnalyticsPage() {
         </Link>
       </div>
 
-      {/* ── Missing Playbook Coverage ── */}
+      {/* Missing Playbook Coverage */}
       <section className="bg-[var(--surface)] border border-[var(--line)] rounded-[var(--radius)] p-[20px]">
         <h3 className="font-display font-bold text-[12px] tracking-[0.08em] uppercase text-[var(--stop)] mb-[12px]">Missing Playbook Coverage</h3>
-        <p className="text-[12px] text-[var(--ink-2)] mb-[10px]">Searches that returned zero results — potential gaps in SOP coverage.</p>
+        <p className="text-[12px] text-[var(--ink-2)] mb-[10px]">Searches that returned zero results - potential gaps in SOP coverage.</p>
         {zeroResultQueries.length === 0 ? (
           <p className="text-[13px] text-[var(--ink-3)]">No zero-result searches recorded yet.</p>
         ) : (
@@ -95,7 +102,7 @@ export default async function AnalyticsPage() {
         )}
       </section>
 
-      {/* ── Popular Queries ── */}
+      {/* Popular Queries */}
       <section className="bg-[var(--surface)] border border-[var(--line)] rounded-[var(--radius)] p-[20px]">
         <h3 className="font-display font-bold text-[12px] tracking-[0.08em] uppercase text-[var(--ink)] mb-[12px]">Popular Search Queries</h3>
         {popularQueries.length === 0 ? (
@@ -120,7 +127,7 @@ export default async function AnalyticsPage() {
         )}
       </section>
 
-      {/* ── Stale SOP Report ── */}
+      {/* Stale SOP Report */}
       <section className="bg-[var(--surface)] border border-[var(--line)] rounded-[var(--radius)] p-[20px]">
         <h3 className="font-display font-bold text-[12px] tracking-[0.08em] uppercase text-[var(--ink)] mb-[12px]">SOP Freshness Report</h3>
         <p className="text-[12px] text-[var(--ink-2)] mb-[12px]">Based on the <code className="font-mono text-[11px] bg-[var(--ground)] px-1">lastConfirmed</code> date on each Playbook.</p>
@@ -130,7 +137,7 @@ export default async function AnalyticsPage() {
             <span className="text-[22px] font-bold">{staleBuckets.fresh.length}</span>
           </div>
           <div className="flex flex-col bg-[var(--warn-soft,#fff8e1)] border border-[var(--warn)] rounded-[6px] p-[12px]">
-            <span className="font-display font-bold text-[10px] uppercase text-[var(--warn)] tracking-[0.1em]">Aging (91–180 days)</span>
+            <span className="font-display font-bold text-[10px] uppercase text-[var(--warn)] tracking-[0.1em]">Aging (91-180 days)</span>
             <span className="text-[22px] font-bold">{staleBuckets.aging.length}</span>
           </div>
           <div className="flex flex-col bg-[var(--stop-soft)] border border-[var(--stop)] rounded-[6px] p-[12px]">

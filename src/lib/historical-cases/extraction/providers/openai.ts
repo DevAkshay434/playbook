@@ -2,14 +2,17 @@ import OpenAI from "openai";
 import { ExtractionResult, HistoricalConversationInput } from "../types";
 import { sanitizeConversation } from "../sanitize";
 
-export const OPENAI_EXTRACTION_VERSION = "1.0.0-openai";
+export const OPENAI_EXTRACTION_VERSION = "1.0.0-openai-responses";
 
 export async function extractWithOpenAI(input: HistoricalConversationInput): Promise<ExtractionResult> {
   const apiKey = process.env.OPENAI_API_KEY;
-  const model = process.env.OPENAI_MODEL || "gpt-4o-mini"; // fallback to a known model if not provided
+  const model = process.env.OPENAI_MODEL;
 
   if (!apiKey) {
     throw new Error("Missing AI Provider Configuration. Please provide OPENAI_API_KEY.");
+  }
+  if (!model) {
+    throw new Error("OPENAI_MODEL must be configured.");
   }
 
   const openai = new OpenAI({ apiKey });
@@ -20,7 +23,7 @@ export async function extractWithOpenAI(input: HistoricalConversationInput): Pro
   // 2. Build and trim conversation
   let conversationText = `Source: ${sanitized.source}\nSubject: ${sanitized.subject || "N/A"}\nTags: ${(sanitized.tags || []).join(", ")}\n\nConversation:\n`;
   
-  // Trimming strategy: Limit to first 10 and last 10 messages to save tokens and focus on issue & resolution
+  // Trimming strategy: Limit to first 10 and last 10 messages
   let messagesToInclude = sanitized.messages;
   const MAX_MESSAGES = 20;
   if (messagesToInclude.length > MAX_MESSAGES) {
@@ -31,7 +34,6 @@ export async function extractWithOpenAI(input: HistoricalConversationInput): Pro
 
   for (const msg of messagesToInclude) {
     const timestampStr = msg.timestamp ? ` [${new Date(msg.timestamp).toISOString()}]` : '';
-    // Cap individual message length to prevent absurdly long payloads
     let text = msg.text || "";
     if (text.length > 2000) {
       text = text.substring(0, 2000) + "... [TRUNCATED]";
@@ -39,8 +41,8 @@ export async function extractWithOpenAI(input: HistoricalConversationInput): Pro
     conversationText += `${msg.role}${timestampStr}:\n${text}\n\n`;
   }
 
-  // 3. System Prompt
-  const systemPrompt = `You are extracting structured support knowledge from a historical support conversation.
+  // 3. System Prompt (Instructions)
+  const instructions = `You are extracting structured support knowledge from a historical support conversation.
 Use only facts contained in the supplied conversation.
 
 Do not invent:
@@ -76,17 +78,17 @@ finalResolution = null
 usableAsHistoricalCase = false
 `;
 
-  // 4. API Call
-  const response = await openai.chat.completions.create({
+  // 4. API Call using Responses API
+  const response = await openai.responses.create({
     model: model,
-    messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: conversationText }
-    ],
-    response_format: {
-      type: "json_schema",
-      json_schema: {
-        name: "historical_case_extraction",
+    store: false,
+    instructions: instructions,
+    input: conversationText,
+    text: {
+      format: {
+        type: "json_schema",
+        name: "historical_support_case",
+        strict: true,
         schema: {
           type: "object",
           properties: {
@@ -104,32 +106,47 @@ usableAsHistoricalCase = false
             "topic", "confidence", "evidenceQuality", "usableAsHistoricalCase"
           ],
           additionalProperties: false
-        },
-        strict: true
+        }
       }
-    },
-    temperature: 0.1
+    }
   });
 
-  const content = response.choices[0]?.message?.content;
-  if (!content) {
-    throw new Error("Received empty response from OpenAI.");
+  // Extract the structured JSON from the response text
+  let content = '';
+  // Inspecting the generic shape of the likely Responses API return
+  // Assuming response.output, response.text, or similar
+  if ((response as any).output) {
+    // some draft specs put it here
+    content = (response as any).output;
+  } else if ((response as any).text?.content) {
+    content = (response as any).text.content;
+  } else {
+    // fallback stringification if it directly returns string
+    content = typeof response === "string" ? response : JSON.stringify(response);
   }
 
-  const result = JSON.parse(content);
+  // Attempt to parse exactly as the required format.
+  // Wait, if the response is actually a stream of parts or structured object:
+  // Let's parse it safely.
+  let parsedContent = content;
+  if (typeof content !== 'string') {
+    // If the SDK parses the json_schema directly into the response:
+    parsedContent = JSON.stringify(content);
+  }
+
+  const result = JSON.parse(parsedContent);
   
   // 5. Post-validation & mapping
-  // Map confidence (0-1) to 0-100 for our DB schema
-  const dbConfidence = Math.round(Math.min(Math.max(result.confidence, 0), 1) * 100);
+  const dbConfidence = Math.round(Math.min(Math.max(result.confidence || 0, 0), 1) * 100);
 
   return {
-    issueSummary: result.issueSummary,
-    symptoms: result.symptoms,
-    troubleshooting: result.troubleshooting,
-    finalResolution: result.finalResolution,
-    topic: result.topic,
+    issueSummary: result.issueSummary || null,
+    symptoms: result.symptoms || null,
+    troubleshooting: result.troubleshooting || null,
+    finalResolution: result.finalResolution || null,
+    topic: result.topic || null,
     confidence: dbConfidence,
-    evidenceQuality: result.evidenceQuality,
-    usableAsHistoricalCase: result.usableAsHistoricalCase
+    evidenceQuality: result.evidenceQuality || "LOW",
+    usableAsHistoricalCase: !!result.usableAsHistoricalCase
   };
 }

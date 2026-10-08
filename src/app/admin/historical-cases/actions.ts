@@ -54,6 +54,8 @@ export async function extractCase(id: string) {
       
       const tagsArray = Array.isArray(supportCase.tags) ? supportCase.tags as string[] : [];
       
+      const profileInfo = ticket.customer_profile || {};
+      
       input = {
         source: "RICHPANEL",
         externalId: supportCase.externalId,
@@ -61,6 +63,11 @@ export async function extractCase(id: string) {
         tags: tagsArray,
         openedAt: supportCase.openedAt,
         resolvedAt: supportCase.resolvedAt,
+        customerProfile: {
+          name: profileInfo.name || null,
+          email: profileInfo.email || null,
+          phone: profileInfo.phone || null,
+        },
         messages: (ticket.comments || []).map((c: any) => ({
           role: (c.sender_type === "contact" ? "CUSTOMER" : (!c.public ? "INTERNAL" : "AGENT")) as "CUSTOMER" | "AGENT" | "INTERNAL" | "SYSTEM",
           text: c.plain_body || c.body || "",
@@ -113,7 +120,7 @@ export async function extractNext5() {
   }
 
   const cases = await prisma.historicalSupportCase.findMany({
-    where: { extractionStatus: "NOT_PROCESSED" },
+    where: { extractionStatus: { in: ["NOT_PROCESSED", "FAILED"] } },
     take: 5
   });
 

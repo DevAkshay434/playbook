@@ -27,11 +27,11 @@ import { extractHistoricalCase, EXTRACTION_VERSION } from "../src/lib/historical
 
 async function runControlledTest() {
   const cases = await prisma.historicalSupportCase.findMany({
-    where: { extractionStatus: "NOT_PROCESSED", source: "RICHPANEL" },
+    where: { extractionStatus: { in: ["NOT_PROCESSED", "FAILED"] }, source: "RICHPANEL" },
     take: 5
   });
 
-  console.log(`Found ${cases.length} NOT_PROCESSED cases.`);
+  console.log(`Found ${cases.length} FAILED/NOT_PROCESSED cases.`);
 
   for (let i = 0; i < cases.length; i++) {
     const supportCase = cases[i];
@@ -46,6 +46,7 @@ async function runControlledTest() {
     try {
       const ticket = await fetchTicket(supportCase.externalId);
       const tagsArray = Array.isArray(supportCase.tags) ? supportCase.tags as string[] : [];
+      const profileInfo = ticket.customer_profile || {};
       
       const input = {
         source: "RICHPANEL",
@@ -54,6 +55,11 @@ async function runControlledTest() {
         tags: tagsArray,
         openedAt: supportCase.openedAt,
         resolvedAt: supportCase.resolvedAt,
+        customerProfile: {
+          name: profileInfo.name || null,
+          email: profileInfo.email || null,
+          phone: profileInfo.phone || null,
+        },
         messages: (ticket.comments || []).map((c: any) => ({
           role: (c.sender_type === "contact" ? "CUSTOMER" : (!c.public ? "INTERNAL" : "AGENT")) as "CUSTOMER" | "AGENT" | "INTERNAL" | "SYSTEM",
           text: c.plain_body || c.body || "",

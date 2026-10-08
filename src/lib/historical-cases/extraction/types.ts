@@ -13,6 +13,11 @@ export interface HistoricalConversationInput {
   openedAt?: Date | null;
   resolvedAt?: Date | null;
   tags?: string[];
+  customerProfile?: {
+    name?: string | null;
+    email?: string | null;
+    phone?: string | null;
+  };
   messages: HistoricalConversationMessage[];
 }
 

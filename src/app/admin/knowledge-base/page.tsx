@@ -2,27 +2,25 @@ import { prisma } from "@/lib/prisma";
 import KBSyncButton from "./KBSyncButton";
 
 export default async function KnowledgeBaseAdminPage() {
-  const articles = await prisma.knowledgeBaseArticle.findMany({
-    orderBy: { title: "asc" }
-  });
+  const [articles, lastSuccessfulSync, lastFailedSync, recentSyncs] = await Promise.all([
+    prisma.knowledgeBaseArticle.findMany({
+      orderBy: { title: "asc" }
+    }),
+    prisma.knowledgeBaseSyncRun.findFirst({
+      where: { status: "SUCCESS" },
+      orderBy: { completedAt: "desc" },
+    }),
+    prisma.knowledgeBaseSyncRun.findFirst({
+      where: { status: "FAILED" },
+      orderBy: { completedAt: "desc" },
+    }),
+    prisma.knowledgeBaseSyncRun.findMany({
+      orderBy: { startedAt: "desc" },
+      take: 10,
+    })
+  ]);
 
   const activeCount = articles.filter(a => a.active).length;
-
-  // Sync history
-  const lastSuccessfulSync = await prisma.knowledgeBaseSyncRun.findFirst({
-    where: { status: "SUCCESS" },
-    orderBy: { completedAt: "desc" },
-  });
-
-  const lastFailedSync = await prisma.knowledgeBaseSyncRun.findFirst({
-    where: { status: "FAILED" },
-    orderBy: { completedAt: "desc" },
-  });
-
-  const recentSyncs = await prisma.knowledgeBaseSyncRun.findMany({
-    orderBy: { startedAt: "desc" },
-    take: 10,
-  });
 
   return (
     <div className="flex flex-col gap-[20px]">
