@@ -11,6 +11,7 @@ export interface RichpanelTicket {
   tags?: string[];
   url?: string;
   comments?: RichpanelComment[];
+  customer_profile?: any;
 }
 
 export interface RichpanelComment {
