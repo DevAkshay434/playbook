@@ -22,6 +22,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { name: "Playbooks", href: "/admin/playbooks" },
     { name: "Resolutions", href: "/admin/resolutions" },
     { name: "Knowledge Base", href: "/admin/knowledge-base" },
+    { name: "Historical Cases", href: "/admin/historical-cases" },
     { name: "Analytics", href: "/admin/analytics" },
     ...(isAdmin(role) ? [{ name: "Users", href: "/admin/users" }] : []),
   ];
