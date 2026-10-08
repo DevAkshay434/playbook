@@ -27,46 +27,48 @@ const API_URL = process.env.GHL_API_URL || "https://services.leadconnectorhq.com
 const API_VERSION = process.env.GHL_API_VERSION || "2021-07-28";
 
 async function main() {
-  console.log("=== GHL API PREFLIGHT ===");
-  if (!TOKEN) {
-    console.error("❌ ERROR: GHL_PRIVATE_INTEGRATION_TOKEN is missing in .env.local");
-    process.exit(1);
-  }
-  console.log("✅ API Token found (hidden)");
+  const headers = {
+    "Authorization": `Bearer ${TOKEN}`,
+    "Version": API_VERSION,
+    "Accept": "application/json"
+  };
 
-  if (!LOCATION_ID) {
-    console.error("❌ ERROR: GHL_LOCATION_ID is missing.");
-    console.log("Without GHL_LOCATION_ID, conversation search cannot be scoped properly.");
-    process.exit(1);
-  }
-  console.log(`✅ Location ID: ${LOCATION_ID}`);
-  console.log(`✅ API URL: ${API_URL}`);
-  console.log(`✅ API Version: ${API_VERSION}`);
-
-  console.log("\n--- Testing Authentication & Fetching Conversations ---");
   try {
-    const listUrl = `${API_URL}/conversations/search?locationId=${LOCATION_ID}&limit=5`;
-    const headers = {
-      "Authorization": `Bearer ${TOKEN}`,
-      "Version": API_VERSION,
-      "Accept": "application/json"
-    };
-
-    console.log(`[GET] ${listUrl}`);
-    const res = await fetch(listUrl, { headers });
-
-    if (!res.ok) {
-      console.error(`❌ HTTP Error: ${res.status} ${res.statusText}`);
-      const text = await res.text();
-      console.error("Response:", text);
-      return;
+    const searchUrl = `${API_URL}/conversations/search?locationId=${LOCATION_ID}&limit=5`;
+    const res = await fetch(searchUrl, { headers });
+    const searchData = await res.json();
+    const convs = searchData.conversations || [];
+    
+    if (convs.length > 0) {
+      for (const conv of convs) {
+        const msgRes = await fetch(`${API_URL}/conversations/${conv.id}/messages`, { headers });
+        if (msgRes.ok) {
+          const msgData = await msgRes.json();
+          const messages = msgData.messages?.messages || msgData.messages || msgData.data || [];
+          console.log(`MsgData keys:`, Object.keys(msgData), 'messages array len:', messages.length);
+          if (messages.length > 0) {
+            console.log(`\n=== Message Schema (from conv ${conv.id}) ===`);
+            console.log(JSON.stringify(messages[0], null, 2).replace(LOCATION_ID!, "HIDDEN_LOCATION").substring(0, 1500));
+            break;
+          }
+        }
+      }
     }
 
-    const data = await res.json();
-    console.log("✅ Connection Successful!\n");
-    console.log(JSON.stringify(data, null, 2).substring(0, 3000));
+    // Try Message Export Endpoint with limit=10
+    console.log("\n=== Checking Message Export Endpoint ===");
+    const exportUrl = `${API_URL}/conversations/messages/export?locationId=${LOCATION_ID}&limit=10`;
+    const exportRes = await fetch(exportUrl, { headers });
+    if (exportRes.ok) {
+        const exData = await exportRes.json();
+        console.log("✅ Message Export Fetch Successful!");
+        console.log("Keys:", Object.keys(exData));
+    } else {
+        console.log(`❌ Export error: ${exportRes.status} ${await exportRes.text()}`);
+    }
+
   } catch (err: any) {
-    console.error("❌ Network or Execution Error:", err.message);
+    console.error("❌ Execution Error:", err.message);
   }
 }
 

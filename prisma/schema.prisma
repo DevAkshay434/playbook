@@ -248,6 +248,7 @@ enum SupportCaseSource {
 
 enum HistoricalCaseExtractionStatus {
   NOT_PROCESSED
+  PROCESSING
   READY
   FAILED
 }
@@ -275,6 +276,12 @@ model HistoricalSupportCase {
   status  String?
   topic   String?
   channel String?
+
+  confidence             Int?
+  evidenceQuality        String?
+  usableAsHistoricalCase Boolean?
+  extractedAt            DateTime?
+  extractionVersion      String?
 
   tags Json?
 

@@ -55,7 +55,18 @@ export default async function HistoricalCasesPage({
           <h2 className="text-[26px] font-bold tracking-[-0.015em]">Historical Support Cases</h2>
           <p className="text-[var(--ink-2)] text-[13.5px]">Review and normalize historical tickets from Richpanel and GHL.</p>
         </div>
-        <SyncButton />
+        <div className="flex items-center gap-[10px]">
+          <form action={async () => {
+            "use server";
+            const { extractNext5 } = await import("./actions");
+            await extractNext5();
+          }}>
+            <button type="submit" className="bg-[var(--surface-2)] text-[var(--ink)] border border-[var(--line)] text-[13px] font-bold p-[9px_15px] rounded-[4px] hover:bg-[var(--line)] disabled:opacity-50 cursor-pointer">
+              Extract Next 5
+            </button>
+          </form>
+          <SyncButton />
+        </div>
       </div>
 
       {lastSync && (
