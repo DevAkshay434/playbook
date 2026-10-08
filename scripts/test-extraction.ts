@@ -28,6 +28,7 @@ async function runTests() {
   assert.strictEqual(cleanConv.messages[0].text, "Call me at [PHONE]");
 
   // 2. Extractor Test (Missing Provider gracefully fails)
+  process.env.OPENAI_API_KEY = "";
   try {
     await extractHistoricalCase(cleanConv);
     assert.fail("Should throw missing AI provider error");
@@ -44,3 +45,4 @@ try {
   console.error("Test failed:", err.message);
   process.exit(1);
 }
+

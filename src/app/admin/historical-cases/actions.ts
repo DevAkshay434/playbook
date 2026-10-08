@@ -4,6 +4,9 @@ import { prisma } from "@/lib/prisma";
 import { requireActiveDbUser } from "@/lib/server-auth";
 import { isManager } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { fetchTicket } from "@/lib/integrations/richpanel/client";
+import { extractHistoricalCase, EXTRACTION_VERSION } from "@/lib/historical-cases/extraction/extractor";
+import { HistoricalConversationInput } from "@/lib/historical-cases/extraction/types";
 
 export async function setReviewStatus(id: string, status: "APPROVED" | "REJECTED" | "PENDING") {
   const { dbUser } = await requireActiveDbUser();
@@ -33,35 +36,73 @@ export async function extractCase(id: string) {
     throw new Error("Case not found");
   }
 
-  // Set processing state
+  // Set processing state (idempotent, resets PENDING)
   await prisma.historicalSupportCase.update({
     where: { id },
     data: { 
       extractionStatus: "PROCESSING",
-      reviewStatus: "PENDING" // Reset review if re-extracting
+      reviewStatus: "PENDING"
     }
   });
   
-  revalidatePath("/admin/historical-cases");
-
-  // In a real flow, this would fire an async background job or hit an API route
-  // that runs `extractHistoricalCase()`. Because Vercel free tier might timeout
-  // on long AI calls, Next.js background workers or a separate route is ideal.
-  // For now, we will simulate the "FAILED - Missing API key" boundary directly 
-  // by updating the status to FAILED since no AI provider is configured.
-  
   try {
-     // await runExtractionJob(id) ...
-     throw new Error("Missing AI Provider Configuration. Please provide OPENAI_API_KEY.");
+    let input: HistoricalConversationInput;
+
+    if (supportCase.source === "RICHPANEL") {
+      // 1. Fetch original ticket from Richpanel (in memory only)
+      const ticket = await fetchTicket(supportCase.externalId);
+      
+      const tagsArray = Array.isArray(supportCase.tags) ? supportCase.tags as string[] : [];
+      
+      input = {
+        source: "RICHPANEL",
+        externalId: supportCase.externalId,
+        subject: supportCase.subject,
+        tags: tagsArray,
+        openedAt: supportCase.openedAt,
+        resolvedAt: supportCase.resolvedAt,
+        messages: (ticket.comments || []).map((c: any) => ({
+          role: (c.sender_type === "contact" ? "CUSTOMER" : (!c.public ? "INTERNAL" : "AGENT")) as "CUSTOMER" | "AGENT" | "INTERNAL" | "SYSTEM",
+          text: c.plain_body || c.body || "",
+          timestamp: new Date(c.created_at)
+        })).filter((m: any) => m.text) // filter empty
+      };
+    } else {
+      throw new Error(`Extraction for source ${supportCase.source} not implemented yet`);
+    }
+
+    // 2. Perform AI Extraction
+    const extractionResult = await extractHistoricalCase(input);
+
+    // 3. Persist Extracted Data
+    await prisma.historicalSupportCase.update({
+      where: { id },
+      data: {
+        extractionStatus: "READY",
+        issueText: extractionResult.issueSummary,
+        symptoms: extractionResult.symptoms,
+        troubleshooting: extractionResult.troubleshooting,
+        resolutionText: extractionResult.finalResolution,
+        topic: extractionResult.topic,
+        confidence: extractionResult.confidence,
+        evidenceQuality: extractionResult.evidenceQuality,
+        usableAsHistoricalCase: extractionResult.usableAsHistoricalCase,
+        extractedAt: new Date(),
+        extractionVersion: EXTRACTION_VERSION
+      }
+    });
+
   } catch (err: any) {
-     await prisma.historicalSupportCase.update({
-       where: { id },
-       data: { 
-         extractionStatus: "FAILED" 
-       }
-     });
-     console.error(`Safe log: Extraction failed for case ${id}. Reason:`, err.message);
-     revalidatePath("/admin/historical-cases");
+    // Fail gracefully
+    await prisma.historicalSupportCase.update({
+      where: { id },
+      data: { 
+        extractionStatus: "FAILED" 
+      }
+    });
+    console.error(`Safe log: Extraction failed for case ${id}. Reason:`, err.message);
+  } finally {
+    revalidatePath("/admin/historical-cases");
   }
 }
 
