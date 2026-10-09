@@ -13,13 +13,19 @@ function getHeaders() {
   };
 }
 
-export async function fetchClosedTickets(limit: number = 30, nextUrl?: string | null): Promise<RichpanelSearchResponse> {
+export async function fetchClosedTickets(limit: number = 30, nextUrl?: string | null, updatedAfter?: Date | null): Promise<RichpanelSearchResponse> {
   const API_URL = process.env.RICHPANEL_API_URL || "https://api.richpanel.com/v1/";
-  const url = nextUrl || `${API_URL}tickets?status=CLOSED`;
+  let url = nextUrl || `${API_URL}tickets?status=CLOSED`;
+  if (!nextUrl && updatedAfter) {
+    url += `&updated_after=${updatedAfter.getTime()}`;
+  }
   const res = await fetch(url, { headers: getHeaders() });
   
+  if (res.status === 429) {
+    throw new Error(`Richpanel API Rate Limit Exceeded: 429`);
+  }
   if (!res.ok) {
-    throw new Error(`Richpanel API Error: ${res.status} ${await res.text()}`);
+    throw new Error(`Richpanel API Error: ${res.status}`);
   }
   
   return await res.json() as RichpanelSearchResponse;

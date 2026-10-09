@@ -67,7 +67,9 @@ export default function CaseRow({ c }: { c: HistoricalSupportCase }) {
       </td>
       <td className="text-left p-[10px_14px] border-b border-[var(--line-soft)] align-top">
         <div className="flex flex-col gap-[6px]">
-          <span className="font-semibold">{c.subject || "(No Subject)"}</span>
+          <a href={`/admin/historical-cases/${c.id}`} className="font-semibold hover:underline text-[var(--ink)] no-underline">
+            {c.subject || "(No Subject)"}
+          </a>
           <div className="flex flex-wrap gap-[4px]">
             {Array.isArray(c.tags) && c.tags.map((t: any, i) => (
               <span key={i} className="font-display font-bold text-[9px] tracking-wider uppercase rounded-[4px] px-[6px] py-[2px] bg-[var(--surface-2)] text-[var(--ink-2)] border border-[var(--line-soft)]">
@@ -160,6 +162,10 @@ export default function CaseRow({ c }: { c: HistoricalSupportCase }) {
             )}
             {extractLabel}
           </button>
+          
+          <a href={`/admin/historical-cases/${c.id}`} className="w-full mt-[5px] text-center text-[11px] font-bold text-[var(--accent)] hover:underline">
+            View Details
+          </a>
         </div>
       </td>
     </tr>

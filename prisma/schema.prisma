@@ -316,5 +316,6 @@ model IntegrationSyncState {
   recordsInserted     Int               @default(0)
   recordsUpdated      Int               @default(0)
   recordsSkipped      Int               @default(0)
+  recordsErrored      Int               @default(0)
   errorMessage        String?
 }

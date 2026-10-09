@@ -36,6 +36,11 @@ export async function extractCase(id: string) {
     throw new Error("Case not found");
   }
 
+  // Pre-flight check: Is AI configured?
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error("AI extraction is not configured yet. Add the OpenAI API configuration to enable extraction.");
+  }
+
   // Set processing state (idempotent, resets PENDING)
   await prisma.historicalSupportCase.update({
     where: { id },
@@ -118,13 +123,49 @@ export async function extractNext5() {
   if (!isManager(dbUser.role)) {
     throw new Error("Unauthorized");
   }
+  
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error("AI extraction is not configured yet. Add the OpenAI API configuration to enable extraction.");
+  }
 
   const cases = await prisma.historicalSupportCase.findMany({
-    where: { extractionStatus: { in: ["NOT_PROCESSED", "FAILED"] } },
+    where: { extractionStatus: { in: ["NOT_PROCESSED", "FAILED"] }, active: true },
     take: 5
   });
 
   for (const c of cases) {
     await extractCase(c.id).catch(() => {});
   }
+}
+
+export async function recoverStaleProcessing() {
+  const { dbUser } = await requireActiveDbUser();
+  if (!isManager(dbUser.role)) {
+    throw new Error("Unauthorized");
+  }
+
+  // 30 minutes ago
+  const threshold = new Date(Date.now() - 30 * 60 * 1000);
+
+  const staleCases = await prisma.historicalSupportCase.findMany({
+    where: { 
+      extractionStatus: "PROCESSING", 
+      updatedAt: { lt: threshold } 
+    }
+  });
+
+  if (staleCases.length > 0) {
+    await prisma.historicalSupportCase.updateMany({
+      where: { 
+        id: { in: staleCases.map(c => c.id) } 
+      },
+      data: {
+        extractionStatus: "FAILED",
+        issueText: "Extraction interrupted. Retry required."
+      }
+    });
+  }
+  
+  revalidatePath("/admin/historical-cases");
+  return staleCases.length;
 }
