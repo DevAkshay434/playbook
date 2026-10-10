@@ -74,7 +74,7 @@ export async function extractCase(id: string) {
           phone: profileInfo.phone || null,
         },
         messages: (ticket.comments || []).map((c: any) => ({
-          role: (c.sender_type === "contact" ? "CUSTOMER" : (!c.public ? "INTERNAL" : "AGENT")) as "CUSTOMER" | "AGENT" | "INTERNAL" | "SYSTEM",
+          role: (c.is_operator === false ? "CUSTOMER" : "AGENT") as "CUSTOMER" | "AGENT" | "INTERNAL" | "SYSTEM",
           text: c.plain_body || c.body || "",
           timestamp: new Date(c.created_at)
         })).filter((m: any) => m.text) // filter empty
@@ -84,6 +84,32 @@ export async function extractCase(id: string) {
     }
 
     // 2. Perform AI Extraction
+    
+    // Deterministic Pre-flight: Prevent wasted tokens
+    const hasCustomer = input.messages.some(m => m.role === "CUSTOMER");
+    const hasAgent = input.messages.some(m => m.role === "AGENT");
+    
+    if (input.messages.length === 0 || !hasCustomer || !hasAgent) {
+      // Mark as unusable safely without calling OpenAI
+      await prisma.historicalSupportCase.update({
+        where: { id },
+        data: {
+          extractionStatus: "READY",
+          issueText: null,
+          symptoms: null,
+          troubleshooting: null,
+          resolutionText: null,
+          topic: null,
+          confidence: 0,
+          evidenceQuality: "LOW",
+          usableAsHistoricalCase: false,
+          extractedAt: new Date(),
+          extractionVersion: "1.0.0-deterministic-skip"
+        }
+      });
+      return;
+    }
+
     const extractionResult = await extractHistoricalCase(input);
 
     // 3. Persist Extracted Data
@@ -130,6 +156,7 @@ export async function extractNext5() {
 
   const cases = await prisma.historicalSupportCase.findMany({
     where: { extractionStatus: { in: ["NOT_PROCESSED", "FAILED"] }, active: true },
+    orderBy: { messageCount: 'desc' },
     take: 5
   });
 

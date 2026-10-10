@@ -30,4 +30,9 @@ export interface ExtractionResult {
   confidence: number; // 0-100
   evidenceQuality: "HIGH" | "MEDIUM" | "LOW";
   usableAsHistoricalCase: boolean;
+  usage?: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+  };
 }

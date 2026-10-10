@@ -291,6 +291,8 @@ model HistoricalSupportCase {
   resolvedAt      DateTime?
   sourceUpdatedAt DateTime?
 
+  messageCount Int @default(0)
+
   extractionStatus HistoricalCaseExtractionStatus @default(NOT_PROCESSED)
   reviewStatus     HistoricalCaseReviewStatus     @default(PENDING)
 

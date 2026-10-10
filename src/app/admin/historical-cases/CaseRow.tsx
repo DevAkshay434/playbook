@@ -77,7 +77,16 @@ export default function CaseRow({ c }: { c: HistoricalSupportCase }) {
               </span>
             ))}
           </div>
-
+          {c.messageCount === 0 && (
+            <div className="text-[10px] uppercase font-bold tracking-widest text-[var(--stop)] mt-[4px]">
+              Conversation: Empty / Stub
+            </div>
+          )}
+          {c.messageCount > 0 && (
+            <div className="text-[10px] uppercase font-bold tracking-widest text-[var(--ok)] mt-[4px]">
+              Conversation: Available ({c.messageCount} msgs)
+            </div>
+          )}
           {c.extractionStatus === 'READY' && (
             <details className="mt-[10px] bg-[var(--ground)] border border-[var(--line-soft)] rounded-[6px] p-[10px] text-[12px] group">
               <summary className="font-bold cursor-pointer outline-none select-none text-[var(--accent)] group-open:mb-[10px]">
@@ -151,7 +160,8 @@ export default function CaseRow({ c }: { c: HistoricalSupportCase }) {
           
           <button 
             onClick={handleExtract}
-            disabled={isGlobalPending || c.extractionStatus === 'PROCESSING'} 
+            disabled={isGlobalPending || c.extractionStatus === 'PROCESSING' || c.messageCount === 0} 
+            title={c.messageCount === 0 ? "No support conversation is available for extraction." : ""}
             className="w-full text-center text-[11px] font-bold px-[8px] py-[4px] rounded-[4px] bg-[var(--surface-2)] border border-[var(--line)] hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:opacity-50 cursor-pointer flex justify-center gap-[6px] items-center"
           >
             {isPendingExtract && (

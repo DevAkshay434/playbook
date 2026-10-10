@@ -90,6 +90,12 @@ export async function runRichpanelSync(options: SyncOptions = {}) {
           skipped++;
           continue;
         }
+
+        const comments = t.comments || [];
+        const msgCount = comments.length;
+
+        const hasCustomer = comments.some((c:any) => c.is_operator === false);
+        const hasAgent = comments.some((c:any) => c.is_operator === true);
         
         try {
           const normalized = normalizeRichpanelTicket(t);
@@ -116,7 +122,8 @@ export async function runRichpanelSync(options: SyncOptions = {}) {
                 resolvedAt: normalized.closedAt,
                 sourceUrl: normalized.sourceUrl,
                 externalNumber: normalized.externalNumber,
-                active: true
+                active: true,
+                messageCount: msgCount
               }
             });
             updated++;
@@ -134,7 +141,8 @@ export async function runRichpanelSync(options: SyncOptions = {}) {
                 sourceUpdatedAt: normalized.sourceUpdatedAt,
                 reviewStatus: "PENDING",
                 extractionStatus: "NOT_PROCESSED",
-                active: true
+                active: true,
+                messageCount: msgCount
               }
             });
             inserted++;

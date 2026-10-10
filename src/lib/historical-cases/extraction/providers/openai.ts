@@ -15,7 +15,10 @@ export async function extractWithOpenAI(input: HistoricalConversationInput): Pro
     throw new Error("OPENAI_MODEL must be configured.");
   }
 
-  const openai = new OpenAI({ apiKey });
+  const openai = new OpenAI({ 
+    apiKey,
+    baseURL: apiKey.startsWith("sk-or") ? "https://openrouter.ai/api/v1" : undefined
+  });
 
   // 1. Sanitize
   const sanitized = sanitizeConversation(input);
@@ -139,6 +142,8 @@ usableAsHistoricalCase = false
   // 5. Post-validation & mapping
   const dbConfidence = Math.round(Math.min(Math.max(result.confidence || 0, 0), 1) * 100);
 
+  const usageData = (response as any).usage;
+
   return {
     issueSummary: result.issueSummary || null,
     symptoms: result.symptoms || null,
@@ -147,6 +152,11 @@ usableAsHistoricalCase = false
     topic: result.topic || null,
     confidence: dbConfidence,
     evidenceQuality: result.evidenceQuality || "LOW",
-    usableAsHistoricalCase: !!result.usableAsHistoricalCase
+    usableAsHistoricalCase: !!result.usableAsHistoricalCase,
+    usage: usageData ? {
+      promptTokens: usageData.prompt_tokens || 0,
+      completionTokens: usageData.completion_tokens || 0,
+      totalTokens: usageData.total_tokens || 0
+    } : undefined
   };
 }
