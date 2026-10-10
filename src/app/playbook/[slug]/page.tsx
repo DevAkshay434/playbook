@@ -1,5 +1,5 @@
 import { getPlaybooks, getPlaybookBySlug, getManualKBLinksForPlaybook } from "@/lib/db-services";
-import { performSearch } from "@/app/actions/search";
+import { performSearch, findSimilarResolvedCases } from "@/app/actions/search";
 import { notFound } from "next/navigation";
 import PlaybookCard from "@/components/playbook/PlaybookCard";
 import SimilarResolvedCases from "@/components/cases/SimilarResolvedCases";
@@ -54,6 +54,9 @@ export default async function PlaybookPage({ params }: { params: Promise<{ slug:
   }
 
   const allRelatedArticles = [...manualArticles, ...autoArticles];
+  
+  // 3. Similar Resolved Cases
+  const similarCases = await findSimilarResolvedCases(playbook.id);
 
   return (
     <div className="max-w-[800px] mx-auto py-[40px] px-[20px]">
@@ -81,8 +84,9 @@ export default async function PlaybookPage({ params }: { params: Promise<{ slug:
         </section>
       )}
 
-      {/* Similar Resolved Cases — empty until Richpanel/GHL are connected */}
-      <SimilarResolvedCases cases={[]} />
+      {similarCases.length > 0 && (
+        <SimilarResolvedCases cases={similarCases} />
+      )}
     </div>
   );
 }

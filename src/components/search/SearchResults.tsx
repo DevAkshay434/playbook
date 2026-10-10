@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { logSearch, performSearch, UnifiedSearchResult } from "@/app/actions/search";
 import Link from "next/link";
 
+import { CaseCard } from "@/components/cases/CaseCard";
+
 interface SearchResultsProps {
   query: string;
   categoryFilter?: string;
@@ -49,6 +51,7 @@ export default function SearchResults({ query, categoryFilter, authorityFilter }
 
   const playbooks = results.filter(r => r.type === "playbook");
   const kbArticles = results.filter(r => r.type === "kb_article");
+  const historicalCases = results.filter(r => r.type === "historical_case").slice(0, 3);
 
   return (
     <div className="flex flex-col gap-[25px] mt-[10px]">
@@ -56,7 +59,7 @@ export default function SearchResults({ query, categoryFilter, authorityFilter }
         <div className="flex flex-col gap-[10px]">
           <h3 className="font-display font-bold text-[10px] tracking-[0.16em] uppercase text-[var(--ink-3)] px-[5px]">Official Playbooks</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-[15px]">
-            {playbooks.map(p => (
+            {playbooks.map((p: any) => (
               <Link key={p.id} href={`/playbook/${p.slug}`} className="flex flex-col bg-[var(--surface)] border border-[var(--line)] rounded-[var(--radius)] p-[15px] hover:border-[var(--accent)] hover:shadow-[var(--shadow-hover)] transition-all no-underline">
                 <div className="flex justify-between items-start mb-[8px]">
                   <span className="font-display font-bold text-[9px] tracking-[0.1em] uppercase text-[var(--accent)] bg-[var(--accent-soft)] px-[6px] py-[3px] rounded-[4px]">{p.categoryName}</span>
@@ -73,7 +76,7 @@ export default function SearchResults({ query, categoryFilter, authorityFilter }
         <div className="flex flex-col gap-[10px]">
           <h3 className="font-display font-bold text-[10px] tracking-[0.16em] uppercase text-[var(--ink-3)] px-[5px]">Related Knowledge Base</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-[15px]">
-            {kbArticles.map(a => (
+            {kbArticles.map((a: any) => (
               <a key={a.id} href={a.url} target="_blank" rel="noreferrer" className="flex flex-col bg-[var(--surface)] border border-[var(--line)] rounded-[var(--radius)] p-[15px] hover:border-[var(--accent)] hover:shadow-[var(--shadow-hover)] transition-all no-underline">
                 <div className="flex justify-between items-start mb-[8px]">
                   <span className="font-display font-bold text-[9px] tracking-[0.1em] uppercase text-[var(--ink-3)] bg-[var(--line)] px-[6px] py-[3px] rounded-[4px]">Knowledge Base</span>
@@ -81,6 +84,26 @@ export default function SearchResults({ query, categoryFilter, authorityFilter }
                 <h4 className="font-bold text-[14px] text-[var(--ink)] m-0 leading-tight mb-[6px]">{a.title}</h4>
                 {a.excerpt && <p className="text-[12px] text-[var(--ink-2)] m-0 line-clamp-2">{a.excerpt}</p>}
               </a>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {historicalCases.length > 0 && (
+        <div className="flex flex-col gap-[10px]">
+          <h3 className="font-display font-bold text-[10px] tracking-[0.16em] uppercase text-[var(--ink-3)] px-[5px]">Historical Resolved Cases</h3>
+          <div className="flex flex-col gap-[10px]">
+            {historicalCases.map((c: any) => (
+              <CaseCard key={c.id} c={{
+                id: c.id,
+                source: c.source || "Unknown",
+                ticketId: c.ticketId,
+                issueSummary: c.title,
+                resolutionSummary: c.resolutionSummary,
+                resolvedDate: c.resolvedDate,
+                tags: c.tags,
+                sourceUrl: c.url
+              }} />
             ))}
           </div>
         </div>

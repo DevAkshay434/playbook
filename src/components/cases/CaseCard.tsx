@@ -18,8 +18,11 @@ export function CaseCard({ c }: { c: ResolvedCase }) {
   return (
     <div className="bg-[var(--surface)] border border-[var(--line)] rounded-[6px] p-[12px] flex flex-col gap-[6px]">
       <div className="flex items-center gap-[6px]">
+        <span className="font-display font-bold text-[9px] tracking-[0.1em] uppercase text-[var(--accent)] bg-[var(--accent-soft)] px-[5px] py-[2px] rounded-[3px]">
+          Historical Reference
+        </span>
         <span className="font-display font-bold text-[9px] tracking-[0.1em] uppercase text-[var(--ink-3)] bg-[var(--line)] px-[5px] py-[2px] rounded-[3px]">
-          {c.source}
+          Source: {c.source}
         </span>
         {c.ticketId && (
           <span className="font-mono text-[11px] text-[var(--ink-3)]">#{c.ticketId}</span>
