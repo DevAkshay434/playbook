@@ -79,6 +79,29 @@ export async function extractCase(id: string) {
           timestamp: new Date(c.created_at)
         })).filter((m: any) => m.text) // filter empty
       };
+    } else if (supportCase.source === "GHL") {
+      const { fetchGhlConversationMessages } = await import("@/lib/integrations/ghl/client");
+      const { normalizeGhlMessages } = await import("@/lib/integrations/ghl/normalizer");
+      const { isConditionalIssueStage } = await import("@/lib/integrations/ghl/rules");
+
+      const rawMsgs = await fetchGhlConversationMessages(supportCase.externalId);
+      const messages = normalizeGhlMessages(rawMsgs);
+      const tagsArray = Array.isArray(supportCase.tags) ? supportCase.tags as string[] : [];
+      const isConditional = isConditionalIssueStage(supportCase.status);
+
+      input = {
+        source: "GHL",
+        externalId: supportCase.externalId,
+        subject: supportCase.subject,
+        tags: tagsArray,
+        openedAt: supportCase.openedAt,
+        resolvedAt: supportCase.resolvedAt,
+        messages,
+        pipelineContext: {
+          stageName: supportCase.status,
+          isConditionalIssueStage: isConditional,
+        }
+      };
     } else {
       throw new Error(`Extraction for source ${supportCase.source} not implemented yet`);
     }

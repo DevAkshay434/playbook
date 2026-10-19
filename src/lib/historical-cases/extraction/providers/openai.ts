@@ -24,7 +24,19 @@ export async function extractWithOpenAI(input: HistoricalConversationInput): Pro
   const sanitized = sanitizeConversation(input);
 
   // 2. Build and trim conversation
-  let conversationText = `Source: ${sanitized.source}\nSubject: ${sanitized.subject || "N/A"}\nTags: ${(sanitized.tags || []).join(", ")}\n\nConversation:\n`;
+  let conversationText = `Source: ${sanitized.source}\nSubject: ${sanitized.subject || "N/A"}\nTags: ${(sanitized.tags || []).join(", ")}\n`;
+  if (sanitized.pipelineContext) {
+    if (sanitized.pipelineContext.pipelineName) {
+      conversationText += `Pipeline: ${sanitized.pipelineContext.pipelineName}\n`;
+    }
+    if (sanitized.pipelineContext.stageName) {
+      conversationText += `Stage: ${sanitized.pipelineContext.stageName}\n`;
+    }
+    if (sanitized.pipelineContext.isConditionalIssueStage) {
+      conversationText += `Stage Type: Conditional Issue Stage (Requires explicit outcome evidence)\n`;
+    }
+  }
+  conversationText += `\nConversation:\n`;
   
   // Trimming strategy: Limit to first 10 and last 10 messages
   let messagesToInclude = sanitized.messages;
@@ -57,6 +69,8 @@ Do not invent:
 
 A suggested action is NOT automatically a confirmed resolution.
 Only populate finalResolution when the conversation provides reasonable evidence that the issue was actually resolved or the final outcome is known.
+
+For conditional issue stages (e.g. Delayed shipping, Missing Items, Damaged Items, Return - Refund Applied), explicit evidence of the final outcome (e.g. confirmed reshipment, documented refund, replacement arranged, claim filed) is strictly required to mark usableAsHistoricalCase = true. If resolution outcome is missing or ambiguous, finalResolution must be null and usableAsHistoricalCase = false.
 
 Do not include:
 - customer names

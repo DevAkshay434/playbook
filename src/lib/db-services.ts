@@ -10,14 +10,19 @@ const allowStaticFallback = process.env.NODE_ENV !== "production" && process.env
 
 export async function getPlaybooks() {
   if (isDbConnected) {
-    return prisma.playbook.findMany({
-      where: { active: true },
-      include: {
-        category: true,
-        policyReferences: true
-      },
-      orderBy: { sortOrder: 'asc' }
-    });
+    try {
+      return await prisma.playbook.findMany({
+        where: { active: true },
+        include: {
+          category: true,
+          policyReferences: true
+        },
+        orderBy: { sortOrder: 'asc' }
+      });
+    } catch (e: any) {
+      console.warn("DB query for playbooks failed, falling back to static data:", e?.message);
+      return fallbackPlaybooks as any;
+    }
   }
   if (!allowStaticFallback) throw new Error("Database connection required.");
   return fallbackPlaybooks;
@@ -25,13 +30,18 @@ export async function getPlaybooks() {
 
 export async function getPlaybookBySlug(slug: string) {
   if (isDbConnected) {
-    return prisma.playbook.findUnique({
-      where: { slug },
-      include: {
-        category: true,
-        policyReferences: true
-      }
-    });
+    try {
+      return await prisma.playbook.findUnique({
+        where: { slug },
+        include: {
+          category: true,
+          policyReferences: true
+        }
+      });
+    } catch (e: any) {
+      console.warn("DB query for playbook slug failed, falling back to static data:", e?.message);
+      return (fallbackPlaybooks.find(p => p.slug === slug) as any) || null;
+    }
   }
   if (!allowStaticFallback) throw new Error("Database connection required.");
   return fallbackPlaybooks.find(p => p.slug === slug) || null;

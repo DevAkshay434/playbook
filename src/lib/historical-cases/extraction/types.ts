@@ -19,6 +19,11 @@ export interface HistoricalConversationInput {
     phone?: string | null;
   };
   messages: HistoricalConversationMessage[];
+  pipelineContext?: {
+    pipelineName?: string | null;
+    stageName?: string | null;
+    isConditionalIssueStage?: boolean;
+  };
 }
 
 export interface ExtractionResult {

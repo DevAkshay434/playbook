@@ -8,7 +8,7 @@ import { ChevronLeft } from "lucide-react";
 
 export async function generateStaticParams() {
   const playbooks = await getPlaybooks();
-  return playbooks.map((p) => ({
+  return playbooks.map((p: any) => ({
     slug: p.slug,
   }));
 }

@@ -27,7 +27,7 @@ export default async function PlaybookAdminPage() {
             </tr>
           </thead>
           <tbody>
-            {playbooks.map((p) => (
+            {playbooks.map((p: any) => (
               <tr key={p.id} className={`[&:last-child_td]:border-b-0 ${!(p as any).active ? 'opacity-50' : ''}`}>
                 <td className="text-left p-[10px_14px] border-b border-[var(--line-soft)] font-semibold flex items-center gap-[6px]">
                   {p.title}

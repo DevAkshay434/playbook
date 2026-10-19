@@ -59,7 +59,8 @@ export default async function HistoricalCasesPage({
   // 2. Fetch data in parallel
   const [
     cases,
-    lastSync,
+    lastSyncRp,
+    lastSyncGhl,
     totalFilteredCount,
     totalCount,
     totalPending,
@@ -75,6 +76,10 @@ export default async function HistoricalCasesPage({
     }),
     prisma.integrationSyncState.findFirst({
       where: { source: "RICHPANEL" },
+      orderBy: { startedAt: 'desc' }
+    }),
+    prisma.integrationSyncState.findFirst({
+      where: { source: "GHL" },
       orderBy: { startedAt: 'desc' }
     }),
     prisma.historicalSupportCase.count({ where: filters }),
@@ -128,18 +133,32 @@ export default async function HistoricalCasesPage({
         </div>
       </div>
 
-      {/* Sync Status */}
-      {lastSync && (
-        <div className={`p-[15px] border rounded-[6px] text-[13px] ${lastSync.status === 'SUCCESS' ? 'bg-[var(--ok-soft)] border-[var(--ok)] text-[var(--ok)]' : lastSync.status === 'FAILED' ? 'bg-[var(--stop-soft)] border-[var(--stop)] text-[var(--stop)]' : 'bg-[var(--surface-2)] border-[var(--line)]'}`}>
-          <strong>Last Sync:</strong> {lastSync.status} at {lastSync.completedAt ? lastSync.completedAt.toLocaleString() : 'N/A'} 
-          <span className="ml-[15px]">
-            (Inserted: {lastSync.recordsInserted}, Updated: {lastSync.recordsUpdated}, Skipped: {lastSync.recordsSkipped}, Errors: {lastSync.recordsErrored})
-          </span>
-          {lastSync.errorMessage && (
-            <div className="mt-[10px] font-mono text-[12px]">{lastSync.errorMessage}</div>
-          )}
-        </div>
-      )}
+      {/* Sync Statuses */}
+      <div className="flex flex-col gap-[10px]">
+        {lastSyncRp && (
+          <div className={`p-[12px] border rounded-[6px] text-[13px] ${lastSyncRp.status === 'SUCCESS' ? 'bg-[var(--ok-soft)] border-[var(--ok)] text-[var(--ok)]' : lastSyncRp.status === 'FAILED' ? 'bg-[var(--stop-soft)] border-[var(--stop)] text-[var(--stop)]' : 'bg-[var(--surface-2)] border-[var(--line)]'}`}>
+            <strong>Richpanel Last Sync:</strong> {lastSyncRp.status} at {lastSyncRp.completedAt ? lastSyncRp.completedAt.toLocaleString() : 'N/A'} 
+            <span className="ml-[15px]">
+              (Scanned: {lastSyncRp.recordsScanned}, Inserted: {lastSyncRp.recordsInserted}, Updated: {lastSyncRp.recordsUpdated}, Skipped: {lastSyncRp.recordsSkipped}, Errors: {lastSyncRp.recordsErrored})
+            </span>
+            {lastSyncRp.errorMessage && (
+              <div className="mt-[6px] font-mono text-[12px]">{lastSyncRp.errorMessage}</div>
+            )}
+          </div>
+        )}
+
+        {lastSyncGhl && (
+          <div className={`p-[12px] border rounded-[6px] text-[13px] ${lastSyncGhl.status === 'SUCCESS' ? 'bg-[var(--ok-soft)] border-[var(--ok)] text-[var(--ok)]' : lastSyncGhl.status === 'FAILED' ? 'bg-[var(--stop-soft)] border-[var(--stop)] text-[var(--stop)]' : 'bg-[var(--surface-2)] border-[var(--line)]'}`}>
+            <strong>GHL Last Sync:</strong> {lastSyncGhl.status} at {lastSyncGhl.completedAt ? lastSyncGhl.completedAt.toLocaleString() : 'N/A'} 
+            <span className="ml-[15px]">
+              (Scanned: {lastSyncGhl.recordsScanned}, Inserted: {lastSyncGhl.recordsInserted}, Updated: {lastSyncGhl.recordsUpdated}, Skipped: {lastSyncGhl.recordsSkipped}, Errors: {lastSyncGhl.recordsErrored})
+            </span>
+            {lastSyncGhl.errorMessage && (
+              <div className="mt-[6px] font-mono text-[12px]">{lastSyncGhl.errorMessage}</div>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Client Wrapper handles filters, loading skeleton, and list */}
       <HistoricalCasesClientWrapper 
