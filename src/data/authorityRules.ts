@@ -3,7 +3,7 @@ import { AuthorityRule } from '@/types/playbook';
 export const authorityRules: AuthorityRule[] = [
   {
     "action": "Reship a lost or damaged unit, standard ground",
-    "who": "Any CS agent",
+    "who": "CS agent",
     "lvl": "resolve",
     "ceiling": "Full unit",
     "confirm": false,
@@ -11,7 +11,7 @@ export const authorityRules: AuthorityRule[] = [
   },
   {
     "action": "Replace a valve head jammed by carbon fines (bone char / Gold+)",
-    "who": "Any CS agent",
+    "who": "CS agent",
     "lvl": "resolve",
     "ceiling": "Valve + freight",
     "confirm": false,
@@ -19,7 +19,7 @@ export const authorityRules: AuthorityRule[] = [
   },
   {
     "action": "Send a missing or wrong small part (basket, o-ring, clip, cable)",
-    "who": "Any CS agent",
+    "who": "CS agent",
     "lvl": "resolve",
     "ceiling": "Part + ground freight",
     "confirm": false,
@@ -29,9 +29,9 @@ export const authorityRules: AuthorityRule[] = [
     "action": "Waive the restocking fee on a return",
     "who": "CS agent",
     "lvl": "judge",
-    "ceiling": "$150",
+    "ceiling": "Varies by system (Pending policy schedule)",
     "confirm": true,
-    "cond": "Customer is escalating and the return is otherwise clean. Above the ceiling, escalate."
+    "cond": "Restocking fee percentage varies by system; fee waiver requires clean return condition and policy confirmation."
   },
   {
     "action": "Goodwill credit to keep a borderline case out of dispute",

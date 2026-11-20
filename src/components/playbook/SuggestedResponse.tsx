@@ -31,10 +31,10 @@ export default function SuggestedResponse({ text }: SuggestedResponseProps) {
           type="button"
           className={cn(
             "border border-[var(--line)] bg-[var(--surface)] font-display font-semibold text-[10px] tracking-[0.08em] uppercase rounded-[5px] px-[9px] py-[4px] cursor-pointer flex-none transition-colors",
-            copied ? "text-[var(--ok)] border-[var(--ok)]" : "text-[var(--ink-2)] hover:border-[var(--accent)] hover:text-[var(--accent)]"
+            copied ? "text-[var(--ok)] border-[var(--ok)] bg-[var(--ok-soft)]" : "text-[var(--ink-2)] hover:border-[var(--accent)] hover:text-[var(--accent)]"
           )}
         >
-          {copied ? "Copied" : "Copy Response"}
+          {copied ? "Copied!" : "Copy Response"}
         </button>
       </div>
     </div>

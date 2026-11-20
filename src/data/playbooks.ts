@@ -392,7 +392,7 @@ export const playbooks: Playbook[] = [
     "slug": "installer",
     "title": "Customer wants an installer referral",
     "category": "tech",
-    "authority": "escalate",
+    "authority": "resolve",
     "customerPhrases": [
       "Do you have someone who can install this?",
       "can you recommend a plumber near me?"
@@ -408,15 +408,15 @@ export const playbooks: Playbook[] = [
       "local installer"
     ],
     "facts": [
-      "There is no installer referral list. This has been flagged as an open gap for nine-plus reporting periods.",
-      "Do not improvise a recommendation. Naming a plumber we haven't vetted creates liability if the install goes wrong.",
-      "Until a list exists, this is an honest 'we don't, here's what to ask for' answer."
+      "There is no approved installer referral list.",
+      "Do not improvise a recommendation. Naming an unvetted plumber creates liability if an installation goes wrong.",
+      "Provide clear technical specifications and requirements so the customer can hire a qualified local professional."
     ],
     "troubleshootingSteps": [
-      "Tell them plainly that we don't maintain a referral list.",
-      "Give them what to ask a local plumber for, so the call goes well: a licensed plumber comfortable with whole-house water treatment, and the unit's inlet/outlet configuration.",
-      "Offer the install guide and to be on the phone with their plumber during the install if it helps.",
-      "Log the request. Volume on this is what will finally get the list built."
+      "Explain clearly that SoftPro does not maintain a referral network.",
+      "Provide what to ask a local contractor: a licensed, insured plumber experienced with whole-house water treatment and the system's inlet/outlet configuration.",
+      "Offer the installation guide and technical support phone contact during the install.",
+      "Log the request. Volume tracking helps operations evaluate local contractor partnerships."
     ],
     "suggestedResponse": "We don't keep a referral list of installers, so I don't want to point you at someone I can't vouch for. What I'd look for is a licensed plumber who's comfortable with whole-house water treatment \u2014 most residential plumbers are. I'll send you the install guide so you can share it with them ahead of time, and if it's useful, I'm happy to be on the phone with your plumber during the install to walk through anything on the valve.",
     "dontDo": [
@@ -424,9 +424,9 @@ export const playbooks: Playbook[] = [
       "Don't say 'let me find someone in your area' unless you actually will."
     ],
     "policyReferences": [],
-    "source": "Open operational gap \u2014 flagged 9+ periods",
-    "lastConfirmed": "Sep 10, 2026",
-    "knownGap": true
+    "source": "Support operations policy",
+    "lastConfirmed": "Oct 15, 2026",
+    "knownGap": false
   },
   {
     "id": "return",
@@ -574,7 +574,7 @@ export const playbooks: Playbook[] = [
     "slug": "sizing",
     "title": "\u201cThe system you sold me is the wrong size\u201d",
     "category": "money",
-    "authority": "judge",
+    "authority": "resolve",
     "customerPhrases": [
       "It's too small for my house",
       "it regenerates constantly",
@@ -595,15 +595,15 @@ export const playbooks: Playbook[] = [
       "mis-sold"
     ],
     "facts": [
-      "Sizing complaints have gone to dispute before \u2014 including one on a 48,000-grain upflow softener. Treat these as chargeback-sensitive from the first message.",
-      "Get real numbers before conceding anything: hardness in gpg, iron, household size, fixture count, and how often it's actually regenerating.",
+      "Sizing complaints are chargeback-sensitive from the first message. Treat with immediate priority.",
+      "Collect real numbers before conceding anything: hardness in gpg, iron, household size, fixture count, and how often it's actually regenerating.",
       "Frequent regeneration is not automatically undersizing \u2014 it can be a settings or metering issue. Check the meter entry first.",
-      "If the unit truly is undersized for the water, that's a sizing error on our side and needs management."
+      "If the unit truly is undersized based on confirmed water analysis, collect diagnostic details and route for equipment exchange per policy."
     ],
     "troubleshootingSteps": [
       "Collect the numbers: hardness, iron, people in the home, and observed regeneration frequency.",
       "Rule out a metering or settings cause before accepting the sizing premise.",
-      "If the specs confirm undersizing, escalate \u2014 the resolution (upsize, partial credit, exchange) is above agent level.",
+      "If confirmed undersized, take diagnostic intake notes and route for equipment exchange per policy schedule.",
       "Whatever the answer, respond fast. These escalate to disputes quickly."
     ],
     "suggestedResponse": "Let's get to the bottom of it with actual numbers rather than guessing. Can you tell me your water hardness in grains per gallon, whether there's iron in the water, how many people are in the house, and how often the unit is currently regenerating? Sometimes what looks like an undersized system is a settings or metering issue we can correct, and sometimes the numbers show we sized it wrong \u2014 either way I want to know which one this is before I tell you anything.",
@@ -650,7 +650,7 @@ export const playbooks: Playbook[] = [
       "Find out what they're actually comparing on \u2014 price, capacity, warranty, or efficiency. The answer differs.",
       "Use the internal breakdown to frame your answer.",
       "Send the customer-facing buyer's guide document.",
-      "If it's a sales-track call, route it to Jeremy or Christine rather than handling it as a service call."
+      "If it's a sales-track call, route it to Jeremy or Kristine rather than handling it as a service call."
     ],
     "suggestedResponse": "Happy to give you a straight comparison rather than a sales pitch \u2014 we actually put together a side-by-side against the units people most often shortlist alongside ours, and I'll send it over. Before I do: what's the main thing you're weighing? If it's upfront price the comparison looks one way, and if it's capacity and long-run salt and water efficiency it looks another.",
     "dontDo": [

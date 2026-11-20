@@ -2,20 +2,29 @@
 
 import { Search } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 
-export default function SearchBar() {
+interface SearchBarProps {
+  value?: string;
+  onChange?: (val: string) => void;
+}
+
+export default function SearchBar({ value, onChange }: SearchBarProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const urlQuery = searchParams.get("q") || "";
-  const [query, setQuery] = useState(urlQuery);
-  const [prevUrlQuery, setPrevUrlQuery] = useState(urlQuery);
+  const [query, setQuery] = useState(value !== undefined ? value : urlQuery);
   const inputRef = useRef<HTMLInputElement>(null);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  if (urlQuery !== prevUrlQuery) {
-    setPrevUrlQuery(urlQuery);
-    setQuery(urlQuery);
-  }
+  // Sync state if external value or URL query changes
+  useEffect(() => {
+    if (value !== undefined) {
+      setQuery(value);
+    } else {
+      setQuery(urlQuery);
+    }
+  }, [value, urlQuery]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -28,30 +37,54 @@ export default function SearchBar() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
+  const updateUrl = useCallback(
+    (newQuery: string) => {
+      const current = new URLSearchParams(Array.from(searchParams.entries()));
+      if (newQuery) {
+        current.set("q", newQuery);
+      } else {
+        current.delete("q");
+      }
+      const search = current.toString();
+      const queryStr = search ? `?${search}` : "";
+      router.replace(`/${queryStr}`, { scroll: false });
+    },
+    [router, searchParams]
+  );
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newQuery = e.target.value;
     setQuery(newQuery);
-    
-    // We update URL params to keep state in URL. 
-    // Using a simple debounce for typing.
-    const current = new URLSearchParams(Array.from(searchParams.entries()));
-    if (newQuery) {
-      current.set("q", newQuery);
-    } else {
-      current.delete("q");
+
+    // 1. Instant notification to parent for 0ms client-side filtering
+    if (onChange) {
+      onChange(newQuery);
     }
-    
-    // Replace state so we don't spam history
-    const search = current.toString();
-    const queryStr = search ? `?${search}` : "";
-    router.replace(`/${queryStr}`, { scroll: false });
+
+    // 2. Debounce URL update (350ms) to avoid spamming navigation and server renders
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    if (!newQuery.trim()) {
+      // Immediate URL clear when input is empty
+      updateUrl("");
+    } else {
+      debounceTimerRef.current = setTimeout(() => {
+        updateUrl(newQuery);
+      }, 350);
+    }
   };
 
   const handleClear = () => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
     setQuery("");
-    const current = new URLSearchParams(Array.from(searchParams.entries()));
-    current.delete("q");
-    router.replace(`/${current.toString() ? `?${current.toString()}` : ""}`, { scroll: false });
+    if (onChange) {
+      onChange("");
+    }
+    updateUrl("");
     inputRef.current?.focus();
   };
 
