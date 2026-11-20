@@ -5,14 +5,16 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import ExtractNextButton from "../ExtractNextButton";
 
-export default async function HistoricalCaseDetailPage({ params }: { params: { id: string } }) {
+export default async function HistoricalCaseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { dbUser } = await requireActiveDbUser();
   if (!isManager(dbUser.role)) {
     redirect("/admin");
   }
 
+  const { id } = await params;
+
   const supportCase = await prisma.historicalSupportCase.findUnique({
-    where: { id: params.id }
+    where: { id }
   });
 
   if (!supportCase) {

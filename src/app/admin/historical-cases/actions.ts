@@ -177,6 +177,26 @@ export async function extractNext5() {
     throw new Error("AI extraction is not configured yet. Add the OpenAI API configuration to enable extraction.");
   }
 
+  // Recover any stale processing cases before selecting candidates
+  const threshold = new Date(Date.now() - 30 * 60 * 1000);
+  const staleCases = await prisma.historicalSupportCase.findMany({
+    where: {
+      extractionStatus: "PROCESSING",
+      updatedAt: { lt: threshold }
+    }
+  });
+  if (staleCases.length > 0) {
+    await prisma.historicalSupportCase.updateMany({
+      where: {
+        id: { in: staleCases.map(c => c.id) }
+      },
+      data: {
+        extractionStatus: "FAILED",
+        issueText: "Extraction interrupted. Retry required."
+      }
+    });
+  }
+
   const cases = await prisma.historicalSupportCase.findMany({
     where: { extractionStatus: { in: ["NOT_PROCESSED", "FAILED"] }, active: true },
     orderBy: { messageCount: 'desc' },
@@ -198,16 +218,16 @@ export async function recoverStaleProcessing() {
   const threshold = new Date(Date.now() - 30 * 60 * 1000);
 
   const staleCases = await prisma.historicalSupportCase.findMany({
-    where: { 
-      extractionStatus: "PROCESSING", 
-      updatedAt: { lt: threshold } 
+    where: {
+      extractionStatus: "PROCESSING",
+      updatedAt: { lt: threshold }
     }
   });
 
   if (staleCases.length > 0) {
     await prisma.historicalSupportCase.updateMany({
-      where: { 
-        id: { in: staleCases.map(c => c.id) } 
+      where: {
+        id: { in: staleCases.map(c => c.id) }
       },
       data: {
         extractionStatus: "FAILED",

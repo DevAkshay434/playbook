@@ -7,7 +7,6 @@ import { redirect } from 'next/navigation';
 import { SupportCaseSource, HistoricalCaseReviewStatus, HistoricalCaseExtractionStatus } from '@prisma/client';
 import HistoricalCasesClientWrapper from './HistoricalCasesClientWrapper';
 import ExtractNextButton from './ExtractNextButton';
-import { recoverStaleProcessing } from './actions';
 import Link from 'next/link';
 
 export const metadata: Metadata = {
@@ -21,17 +20,15 @@ const validExtractionStatuses = Object.values(HistoricalCaseExtractionStatus);
 export default async function HistoricalCasesPage({
   searchParams,
 }: {
-  searchParams: { source?: string; review?: string; extraction?: string; page?: string; q?: string };
+  searchParams: Promise<{ source?: string; review?: string; extraction?: string; page?: string; q?: string }>;
 }) {
   const { dbUser } = await requireActiveDbUser();
   if (!isManager(dbUser.role)) {
     redirect("/admin");
   }
 
-  // 1. Recover any stale PROCESSING cases automatically
-  await recoverStaleProcessing();
-
-  const { source, review, extraction, page, q } = searchParams;
+  const resolvedParams = (await searchParams) || {};
+  const { source, review, extraction, page, q } = resolvedParams;
   const currentPage = Math.max(1, parseInt(page || "1", 10));
   const PAGE_SIZE = 25;
 
